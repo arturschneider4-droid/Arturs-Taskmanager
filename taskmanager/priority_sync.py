@@ -1,6 +1,6 @@
 """V6.2.1 priority synchronization patch.
 
-The editor's Eisenhower priority cards are immediate actions.  This module
+The editor's Eisenhower priority cards are immediate actions. This module
 keeps that action separate from the normal Save operation so unsaved title,
 description, due date, status, and subtasks are not lost when priority changes.
 """
@@ -9,8 +9,8 @@ from .constants import PRIORITIES
 from .db import backup_db, task, update_priority
 from .ui import MainWindow, TrafficLight, ThemeBadge, StatusBadge
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QWidget, QTableWidgetItem, QFont
-from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QHBoxLayout, QWidget, QTableWidgetItem
+from PySide6.QtGui import QColor, QFont
 
 
 _original_editor_priority = MainWindow._editor_priority
