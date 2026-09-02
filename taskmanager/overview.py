@@ -6,7 +6,6 @@ from PySide6.QtWidgets import QFrame, QLabel
 
 
 def overview_scope(label):
-    """Return the task-list filters represented by an overview entry."""
     mapping = {
         "Heute": {"due": "Heute", "status": None},
         "Diese Woche": {"due": "Diese Woche", "status": None},
@@ -18,7 +17,6 @@ def overview_scope(label):
 
 
 def overview_counts(rows, today=None):
-    """Calculate the five overview counters from task rows."""
     today = today or date.today()
     week_end = today + timedelta(days=6 - today.weekday())
     counts = {"Heute": 0, "Diese Woche": 0, "Später": 0, "Erledigt": 0, "Alle": len(rows)}
@@ -40,23 +38,24 @@ def overview_counts(rows, today=None):
 
 
 class _OverviewClickFilter(QObject):
-    def __init__(self, window, label):
-        super().__init__(label)
+    """Click filter with no QObject parent for PySide6/PyInstaller compatibility."""
+    def __init__(self, window, label, key):
+        super().__init__()
         self.window = window
         self.label = label
+        self.key = key
         label.setCursor(QCursor(Qt.PointingHandCursor))
         label.setToolTip(f"{label.text()} anzeigen")
         label.setProperty("overviewClickable", True)
 
     def eventFilter(self, obj, event):
         if obj is self.label and event.type() == QEvent.MouseButtonRelease and event.button() == Qt.LeftButton:
-            self.window.set_overview_scope(self.label.text())
+            self.window.set_overview_scope(self.key)
             return True
         return False
 
 
 def install_overview_navigation(window):
-    """Make the existing lower-left overview entries clickable."""
     overview = window.findChild(QFrame, "overview")
     if overview is None:
         return False
@@ -67,13 +66,13 @@ def install_overview_navigation(window):
         if text in {"Heute", "Diese Woche", "Später", "Erledigt", "Alle Aufgaben"}:
             labels[text] = label
 
+    if not hasattr(window, "_overview_filters"):
+        window._overview_filters = []
+
     for text, label in labels.items():
         key = "Alle" if text == "Alle Aufgaben" else text
-        filt = _OverviewClickFilter(window, key)
+        filt = _OverviewClickFilter(window, label, key)
         label.installEventFilter(filt)
-        # Keep filters alive for the lifetime of the window.
-        if not hasattr(window, "_overview_filters"):
-            window._overview_filters = []
         window._overview_filters.append(filt)
 
     window.set_overview_scope = lambda key: _apply_scope(window, key)
