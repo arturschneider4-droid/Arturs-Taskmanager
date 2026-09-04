@@ -49,6 +49,10 @@ QScrollBar:vertical { width: 9px; background: transparent; margin: 2px; }
 QScrollBar::handle:vertical { background: #9bb2bf; border-radius: 4px; min-height: 28px; }
 QScrollBar::handle:vertical:hover { background: #6f8f9f; }
 QToolTip { background: #172b3a; color: #ffffff; border: 0; padding: 6px 8px; }
+PriorityCard { min-height: 86px; }
+ThemeBadge { padding: 5px 11px; min-width: 90px; }
+QDateEdit { min-width: 145px; }
+QCheckBox { spacing: 8px; }
 """
 
 
