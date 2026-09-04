@@ -1,11 +1,10 @@
 from pathlib import Path
 
 
-def test_v65_shell_rebuild_entrypoint_exists():
+def test_v65_shell_rebuild_entrypoint_is_preserved():
     text = Path("taskmanager/style_v65.py").read_text(encoding="utf-8")
     assert "V65_STYLE" in text
     assert "rebuild_premium_shell" in text
-    # V6.5 deliberately reuses the existing QStackedWidget from ui.py.
     assert "stack = window.stack" in text
     assert "stack.setParent(None)" in text
 
@@ -22,8 +21,9 @@ def test_v65_shell_reuses_existing_functional_widgets():
         assert token in text
 
 
-def test_v65_version_is_wired():
+def test_v7_replaces_v65_shell_at_runtime():
     app = Path("taskmanager/app.py").read_text(encoding="utf-8")
-    assert "style_v65" in app
-    assert 'VERSION = "6.5"' in app
-    assert "rebuild_premium_shell" in app
+    assert "style_v7" in app
+    assert "V7_STYLE" in app
+    assert 'VERSION = "7.0"' in app
+    assert "rebuild_professional_shell" in app
