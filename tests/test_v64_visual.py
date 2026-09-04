@@ -4,13 +4,14 @@ from pathlib import Path
 STYLE = Path("taskmanager/style_v64.py").read_text(encoding="utf-8")
 APP = Path("taskmanager/app.py").read_text(encoding="utf-8")
 UI = Path("taskmanager/ui.py").read_text(encoding="utf-8")
+V65 = Path("taskmanager/style_v65.py").read_text(encoding="utf-8")
 
 
-def test_v64_design_system_is_active():
+def test_v64_design_system_is_retained_under_v65():
     assert "V64_STYLE" in STYLE
     assert "apply_v64_visuals" in STYLE
     assert "V64_STYLE" in APP
-    assert 'VERSION = "6.4"' in APP
+    assert 'VERSION = "6.5"' in APP
 
 
 def test_v64_has_premium_surface_hierarchy():
@@ -35,3 +36,11 @@ def test_themes_navigation_has_dedicated_workspace_adapter():
 def test_existing_functional_views_remain_present():
     for name in ("kanban_page", "eisen_page", "plan_page", "refresh_all", "new_project", "edit_project", "delete_project"):
         assert f"def {name}" in UI
+
+
+def test_v65_really_rebuilds_the_shell():
+    assert "rebuild_premium_shell" in V65
+    assert "#v65Sidebar" in V65
+    assert "#v65Topbar" in V65
+    assert "#v65Overview" in V65
+    assert "side.setFixedWidth(270)" in V65
