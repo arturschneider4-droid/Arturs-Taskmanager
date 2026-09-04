@@ -12,14 +12,12 @@ from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButto
 V7_STYLE = r"""
 * { font-family: "Segoe UI"; font-size: 10pt; color: #253746; }
 QMainWindow, QWidget { background: #F6F8FA; }
-
 #v7Topbar { background: #FFFFFF; border-bottom: 1px solid #DCE3E8; }
 #v7Brand { color: #173A55; font-size: 15pt; font-weight: 700; }
 #v7Version { color: #74828B; font-size: 8pt; font-weight: 600; padding: 3px 6px; }
 #v7Offline { color: #687984; font-size: 8.5pt; }
 #v7TopSearch { background: #F5F7F9; border: 1px solid #D9E1E6; border-radius: 6px; padding: 7px 10px; }
 #v7TopSearch:focus { background: #FFFFFF; border-color: #78AFC8; }
-
 #v7Sidebar { background: #FFFFFF; border-right: 1px solid #DCE3E8; }
 #v7NavHeader { color: #7A8992; font-size: 8pt; font-weight: 700; letter-spacing: 1px; padding: 4px 8px 6px; }
 QPushButton#v7Nav { background: transparent; border: 0; border-radius: 6px; color: #445762; text-align: left; padding: 8px 10px; min-height: 34px; font-weight: 600; }
@@ -34,7 +32,6 @@ QListWidget#v7Themes::item:selected { background: #E8F2F7; color: #005C8D; font-
 QPushButton#v7AddTheme { background: #FFFFFF; border: 1px solid #D4DEE4; border-radius: 6px; color: #3E5663; padding: 7px 9px; font-weight: 600; }
 QPushButton#v7AddTheme:hover { background: #F4F8FA; border-color: #AFC8D6; }
 #v7SidebarFooter { color: #87959D; font-size: 8pt; }
-
 #v7Workspace { background: #F6F8FA; }
 #v7PageHeader { background: transparent; }
 #v7PageTitle { color: #173A55; font-size: 20pt; font-weight: 700; }
@@ -47,7 +44,6 @@ QLineEdit#v7Filter, QComboBox#v7Filter { background: #FFFFFF; border: 1px solid 
 QLineEdit#v7Filter:focus, QComboBox#v7Filter:focus { border-color: #78AFC8; }
 QPushButton#v7Tool { background: #FFFFFF; border: 1px solid #D5DFE5; border-radius: 6px; padding: 7px 10px; color: #425762; font-weight: 600; }
 QPushButton#v7Tool:hover { background: #F2F6F8; }
-
 #v7Detail { background: #FFFFFF; border: 1px solid #DCE4E9; border-radius: 8px; }
 .card { background: #FFFFFF; border: 1px solid #DCE4E9; border-radius: 8px; }
 QTableWidget { background: #FFFFFF; border: 0; gridline-color: transparent; outline: none; }
@@ -63,7 +59,6 @@ QPushButton#soft { background: #FFFFFF; color: #425762; border: 1px solid #D4DEE
 QPushButton#soft:hover { background: #F2F6F8; }
 QPushButton#v7New { background: #0050A4; color: #FFFFFF; border: 0; border-radius: 6px; padding: 8px 13px; font-weight: 700; }
 QPushButton#v7New:hover { background: #0068C9; }
-
 QListWidget { background: #FFFFFF; border: 1px solid #DCE4E9; border-radius: 7px; outline: none; padding: 4px; }
 QListWidget::item { background: #FFFFFF; border: 1px solid #E7ECEF; border-radius: 6px; padding: 8px 9px; margin: 2px 1px; }
 QListWidget::item:hover { background: #F6FAFC; }
@@ -103,18 +98,15 @@ def rebuild_professional_shell(window):
     old = window.centralWidget()
     if old is not None:
         old.setParent(None)
-
     global_search = window.global_search
     global_search.setObjectName("v7TopSearch")
     global_search.setMaximumWidth(300)
     undo = window.undo_button
     undo.setObjectName("soft")
-
     root = QWidget()
     outer = QVBoxLayout(root)
     outer.setContentsMargins(0, 0, 0, 0)
     outer.setSpacing(0)
-
     top = QFrame()
     top.setObjectName("v7Topbar")
     top.setFixedHeight(56)
@@ -127,121 +119,50 @@ def rebuild_professional_shell(window):
     version.setObjectName("v7Version")
     offline = QLabel("● Lokal · Offline")
     offline.setObjectName("v7Offline")
-    tl.addWidget(brand)
-    tl.addWidget(version)
-    tl.addSpacing(8)
-    tl.addWidget(offline)
-    tl.addStretch()
-    tl.addWidget(global_search)
+    tl.addWidget(brand); tl.addWidget(version); tl.addSpacing(8); tl.addWidget(offline); tl.addStretch(); tl.addWidget(global_search)
     new_task = QPushButton("＋  Neue Aufgabe")
     new_task.setObjectName("v7New")
     new_task.clicked.connect(window.new_task)
-    tl.addWidget(new_task)
-    tl.addWidget(undo)
+    tl.addWidget(new_task); tl.addWidget(undo)
     outer.addWidget(top)
-
     body = QWidget()
     body_lay = QHBoxLayout(body)
-    body_lay.setContentsMargins(0, 0, 0, 0)
-    body_lay.setSpacing(0)
-
-    sidebar = QFrame()
-    sidebar.setObjectName("v7Sidebar")
-    sidebar.setFixedWidth(214)
-    sl = QVBoxLayout(sidebar)
-    sl.setContentsMargins(12, 16, 12, 12)
-    sl.setSpacing(3)
-
-    nav_header = QLabel("ARBEITSBEREICHE")
-    nav_header.setObjectName("v7NavHeader")
-    sl.addWidget(nav_header)
+    body_lay.setContentsMargins(0, 0, 0, 0); body_lay.setSpacing(0)
+    sidebar = QFrame(); sidebar.setObjectName("v7Sidebar"); sidebar.setFixedWidth(214)
+    sl = QVBoxLayout(sidebar); sl.setContentsMargins(12, 16, 12, 12); sl.setSpacing(3)
+    nav_header = QLabel("ARBEITSBEREICHE"); nav_header.setObjectName("v7NavHeader"); sl.addWidget(nav_header)
     window.nav = []
     for text, key in [("Aufgaben", "tasks"), ("Kanban", "kanban"), ("Eisenhower", "eisenhower"), ("Planung", "planning"), ("Themengebiete", "themes")]:
-        button = _nav_button(window, text, key)
-        sl.addWidget(button)
-        window.nav.append((key, button))
-
-    divider = QFrame()
-    divider.setObjectName("v7Divider")
-    sl.addWidget(divider)
-    sl.addSpacing(6)
-
-    themes_label = QLabel("THEMENGEBIETE")
-    themes_label.setObjectName("v7ThemesLabel")
-    sl.addWidget(themes_label)
-    projects = window.projects
-    projects.setObjectName("v7Themes")
-    sl.addWidget(projects, 1)
-    add_theme = QPushButton("＋  Neues Themengebiet")
-    add_theme.setObjectName("v7AddTheme")
-    add_theme.clicked.connect(window.new_project)
-    sl.addWidget(add_theme)
-    footer = QLabel("Lokale Datenbank  ·  Offline")
-    footer.setObjectName("v7SidebarFooter")
-    sl.addWidget(footer)
+        button = _nav_button(window, text, key); sl.addWidget(button); window.nav.append((key, button))
+    divider = QFrame(); divider.setObjectName("v7Divider"); sl.addWidget(divider); sl.addSpacing(6)
+    themes_label = QLabel("THEMENGEBIETE"); themes_label.setObjectName("v7ThemesLabel"); sl.addWidget(themes_label)
+    projects = window.projects; projects.setObjectName("v7Themes"); sl.addWidget(projects, 1)
+    add_theme = QPushButton("＋  Neues Themengebiet"); add_theme.setObjectName("v7AddTheme"); add_theme.clicked.connect(window.new_project); sl.addWidget(add_theme)
+    footer = QLabel("Lokale Datenbank  ·  Offline"); footer.setObjectName("v7SidebarFooter"); sl.addWidget(footer)
     body_lay.addWidget(sidebar)
-
-    workspace = QWidget()
-    workspace.setObjectName("v7Workspace")
-    wl = QVBoxLayout(workspace)
-    wl.setContentsMargins(24, 18, 24, 18)
-    wl.setSpacing(10)
-
-    header = QWidget()
-    header.setObjectName("v7PageHeader")
-    hl = QHBoxLayout(header)
-    hl.setContentsMargins(0, 0, 0, 0)
-    hl.setSpacing(4)
-    title = window.title_label
-    title.setObjectName("v7PageTitle")
-    title.setStyleSheet("")
-    hl.addWidget(title)
-    hl.addStretch()
-    wl.addWidget(header)
-
-    scope = QFrame()
-    scope.setObjectName("v7ScopeBar")
-    scope_lay = QHBoxLayout(scope)
-    scope_lay.setContentsMargins(4, 4, 4, 4)
-    scope_lay.setSpacing(2)
+    workspace = QWidget(); workspace.setObjectName("v7Workspace")
+    wl = QVBoxLayout(workspace); wl.setContentsMargins(24, 18, 24, 18); wl.setSpacing(10)
+    header = QWidget(); header.setObjectName("v7PageHeader")
+    hl = QHBoxLayout(header); hl.setContentsMargins(0, 0, 0, 0); hl.setSpacing(4)
+    title = window.title_label; title.setObjectName("v7PageTitle"); title.setStyleSheet(""); hl.addWidget(title); hl.addStretch(); wl.addWidget(header)
+    scope = QFrame(); scope.setObjectName("v7ScopeBar")
+    scope_lay = QHBoxLayout(scope); scope_lay.setContentsMargins(4, 4, 4, 4); scope_lay.setSpacing(2)
     for key, button in window.scope_buttons.items():
-        button.setObjectName("v7Scope")
-        button.setProperty("active", "true" if key == "Alle" else "false")
-        button.style().unpolish(button); button.style().polish(button)
-        scope_lay.addWidget(button)
+        button.setObjectName("v7Scope"); button.setProperty("active", "true" if key == "Alle" else "false"); button.style().unpolish(button); button.style().polish(button); scope_lay.addWidget(button)
     scope_lay.addStretch()
-    theme_filter = window.theme_filter
-    theme_filter.setObjectName("v7Filter")
-    theme_filter.setMinimumWidth(160)
-    scope_lay.addWidget(theme_filter)
+    theme_filter = window.theme_filter; theme_filter.setObjectName("v7Filter"); theme_filter.setMinimumWidth(160); scope_lay.addWidget(theme_filter)
     sort = getattr(window, "_v7_sort_button", None)
     if sort is None:
-        sort = QPushButton("↕  Sortierung")
-        sort.setObjectName("v7Tool")
-        sort.clicked.connect(window.cycle_sort)
-        window._v7_sort_button = sort
-    scope_lay.addWidget(sort)
-    wl.addWidget(scope)
-
-    filters = QHBoxLayout()
-    filters.setSpacing(7)
+        sort = QPushButton("↕  Sortierung"); sort.setObjectName("v7Tool"); sort.clicked.connect(window.cycle_sort); window._v7_sort_button = sort
+    scope_lay.addWidget(sort); wl.addWidget(scope)
+    filters = QHBoxLayout(); filters.setSpacing(7)
     for widget, width in [(window.search, 0), (window.pfilter, 145), (window.sfilter, 125), (window.dfilter, 145)]:
         widget.setObjectName("v7Filter")
-        if width:
-            widget.setFixedWidth(width)
+        if width: widget.setFixedWidth(width)
         filters.addWidget(widget, 1 if width == 0 else 0)
     wl.addLayout(filters)
-
-    stack = window.stack
-    stack.setParent(workspace)
-    wl.addWidget(stack, 1)
-    body_lay.addWidget(workspace, 1)
-    outer.addWidget(body, 1)
-
-    # Keep the existing task editor as the right-hand detail surface.
-    if hasattr(window, "editor"):
-        window.editor.setObjectName("v7Detail")
-
-    window.setCentralWidget(root)
-    _set_active(window, "tasks")
-    window.set_view("tasks")
+    stack = window.stack; stack.setParent(workspace); wl.addWidget(stack, 1)
+    body_lay.addWidget(workspace, 1); outer.addWidget(body, 1)
+    editor = getattr(window, "editor", None)
+    if editor is not None: editor.setObjectName("v7Detail")
+    window.setCentralWidget(root); _set_active(window, "tasks"); window.set_view("tasks")
