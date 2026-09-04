@@ -12,7 +12,8 @@ def test_overview_scope_maps_each_item_to_filters():
 
 
 def test_overview_counts_categories_are_consistent():
-    today = date.today()
+    # Fixed Wednesday keeps the fixture independent of the day on which CI runs.
+    today = date(2026, 9, 2)
     week_end = today + timedelta(days=6 - today.weekday())
     rows = [
         {"status": "Offen", "due_date": today.isoformat()},
