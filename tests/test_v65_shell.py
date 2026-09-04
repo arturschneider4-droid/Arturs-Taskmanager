@@ -5,12 +5,14 @@ def test_v65_shell_rebuild_entrypoint_exists():
     text = Path("taskmanager/style_v65.py").read_text(encoding="utf-8")
     assert "V65_STYLE" in text
     assert "rebuild_premium_shell" in text
-    assert "QStackedWidget" in text
+    # V6.5 deliberately reuses the existing QStackedWidget from ui.py.
+    assert "stack = window.stack" in text
+    assert "stack.setParent(None)" in text
 
 
 def test_v65_shell_has_first_class_navigation_and_overview():
     text = Path("taskmanager/style_v65.py").read_text(encoding="utf-8")
-    for token in ("Arbeitsbereiche", "ÜBERSICHT", "Themengebiete", "Heute", "Diese Woche", "Später", "Erledigt", "Alle Aufgaben"):
+    for token in ("ARBEITSBEREICHE", "ÜBERSICHT", "Themengebiete", "Heute", "Diese Woche", "Später", "Erledigt", "Alle Aufgaben"):
         assert token in text
 
 
