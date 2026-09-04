@@ -5,8 +5,9 @@ from .ui import MainWindow, STYLE
 from .priority_sync import apply_priority_sync
 from .overview import install_overview_navigation
 from .style_v63 import V63_STYLE, apply_v63_visuals
+from .style_v64 import V64_STYLE, apply_v64_visuals
 
-VERSION = "6.3"
+VERSION = "6.4"
 
 
 def main():
@@ -16,10 +17,11 @@ def main():
     apply_priority_sync()
     a = QApplication(sys.argv)
     a.setStyle("Fusion")
-    a.setStyleSheet(STYLE + V63_STYLE)
+    a.setStyleSheet(STYLE + V63_STYLE + V64_STYLE)
     w = MainWindow()
     install_overview_navigation(w)
     apply_v63_visuals(w)
+    apply_v64_visuals(w)
     w.setWindowTitle(f"Arturs Taskmanager V{VERSION}")
     w.show()
     sys.exit(a.exec())
