@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STYLE = ROOT / "taskmanager" / "style_v7.py"
 APP = ROOT / "taskmanager" / "app.py"
