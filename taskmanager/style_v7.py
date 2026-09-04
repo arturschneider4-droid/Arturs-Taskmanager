@@ -48,6 +48,7 @@ QLineEdit#v7Filter:focus, QComboBox#v7Filter:focus { border-color: #78AFC8; }
 QPushButton#v7Tool { background: #FFFFFF; border: 1px solid #D5DFE5; border-radius: 6px; padding: 7px 10px; color: #425762; font-weight: 600; }
 QPushButton#v7Tool:hover { background: #F2F6F8; }
 
+#v7Detail { background: #FFFFFF; border: 1px solid #DCE4E9; border-radius: 8px; }
 .card { background: #FFFFFF; border: 1px solid #DCE4E9; border-radius: 8px; }
 QTableWidget { background: #FFFFFF; border: 0; gridline-color: transparent; outline: none; }
 QTableWidget::item { padding: 8px 9px; border-bottom: 1px solid #EEF2F4; }
@@ -236,6 +237,10 @@ def rebuild_professional_shell(window):
     wl.addWidget(stack, 1)
     body_lay.addWidget(workspace, 1)
     outer.addWidget(body, 1)
+
+    # Keep the existing task editor as the right-hand detail surface.
+    if hasattr(window, "editor"):
+        window.editor.setObjectName("v7Detail")
 
     window.setCentralWidget(root)
     _set_active(window, "tasks")
