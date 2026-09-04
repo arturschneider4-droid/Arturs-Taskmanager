@@ -7,11 +7,11 @@ UI = Path("taskmanager/ui.py").read_text(encoding="utf-8")
 V65 = Path("taskmanager/style_v65.py").read_text(encoding="utf-8")
 
 
-def test_v64_design_system_is_retained_under_v65():
+def test_v64_design_system_is_retained_under_v7():
     assert "V64_STYLE" in STYLE
     assert "apply_v64_visuals" in STYLE
     assert "V64_STYLE" in APP
-    assert 'VERSION = "6.5"' in APP
+    assert 'VERSION = "7.0"' in APP
 
 
 def test_v64_has_premium_surface_hierarchy():
