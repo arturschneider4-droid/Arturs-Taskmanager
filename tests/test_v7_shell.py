@@ -22,6 +22,15 @@ def test_v7_shell_is_compact_and_not_dashboard_heavy():
     assert "setObjectName(\"v7Detail\")" in text
 
 
+def test_v7_table_layout_is_explicit_and_responsive():
+    text = STYLE.read_text(encoding="utf-8")
+    assert "setSectionResizeMode(1, QHeaderView.Stretch)" in text
+    assert "setSectionResizeMode(3, QHeaderView.Fixed)" in text
+    assert "setColumnWidth(3, 88)" in text
+    assert "setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)" in text
+    assert "setChildrenCollapsible(False)" in text
+
+
 def test_app_uses_v7_as_active_shell():
     text = APP.read_text(encoding="utf-8")
     assert "style_v7" in text
