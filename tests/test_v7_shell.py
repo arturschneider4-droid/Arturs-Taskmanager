@@ -25,8 +25,8 @@ def test_v7_shell_is_compact_and_not_dashboard_heavy():
 def test_v7_table_layout_is_explicit_and_responsive():
     text = STYLE.read_text(encoding="utf-8")
     assert "setSectionResizeMode(1, QHeaderView.Stretch)" in text
-    assert "setSectionResizeMode(3, QHeaderView.Fixed)" in text
-    assert "setColumnWidth(3, 88)" in text
+    assert "for column in (2, 3, 4, 5, 6)" in text
+    assert "fixed = {0: 34, 2: 105, 3: 88, 4: 92, 5: 80, 6: 44}" in text
     assert "setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)" in text
     assert "setChildrenCollapsible(False)" in text
 
