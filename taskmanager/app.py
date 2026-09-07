@@ -7,6 +7,7 @@ from .overview import install_overview_navigation
 from .style_v63 import V63_STYLE, apply_v63_visuals
 from .style_v64 import V64_STYLE, apply_v64_visuals
 from .style_v7 import V7_STYLE, rebuild_professional_shell
+from .responsive_table_v7 import configure_responsive_task_area
 
 VERSION = "7.0"
 
@@ -24,6 +25,7 @@ def main():
     apply_v63_visuals(w)
     apply_v64_visuals(w)
     rebuild_professional_shell(w)
+    configure_responsive_task_area(w)
     w.setWindowTitle(f"Arturs Taskmanager V{VERSION}")
     w.show()
     sys.exit(a.exec())
