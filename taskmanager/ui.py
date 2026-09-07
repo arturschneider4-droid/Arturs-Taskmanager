@@ -320,6 +320,14 @@ class MainWindow(QMainWindow):
         if not self.editor_task_id or not self.e_title.text().strip():
             QMessageBox.warning(self, "Aufgabe", "Bitte einen Aufgabentitel eingeben.")
             return
+        # Commit any text typed directly into the QDateEdit before reading its
+        # value. Without this, the widget can still expose the previous valid
+        # date when the user immediately clicks Speichern.
+        self.e_due.interpretText()
+        if not self.e_no_due.isChecked() and not self.e_due.date().isValid():
+            QMessageBox.warning(self, "Aufgabe", "Bitte eine gültige Fälligkeit eingeben.")
+            self.e_due.setFocus()
+            return
         data = {
             "title": self.e_title.text().strip(),
             "project_id": self.e_project.currentData(),
@@ -408,6 +416,7 @@ class MainWindow(QMainWindow):
         p = QWidget(); l = QHBoxLayout(p); l.setContentsMargins(0, 0, 0, 0); self.pcols = {}
         for n in ["Heute", "Diese Woche", "Später"]:
             f = QFrame(); f.setObjectName("card"); fl = QVBoxLayout(f); fl.addWidget(QLabel(n)); w = self.make_list(n); fl.addWidget(w, 1); l.addWidget(f); self.pcols[n] = w
+
         return p
 
     def set_view(self, key):
@@ -623,11 +632,11 @@ class MainWindow(QMainWindow):
             counts = {"Heute": 0, "Diese Woche": 0, "Später": 0, "Erledigt": 0, "Alle": len(all_rows)}
             for r in all_rows:
                 if r["status"] == "Erledigt": counts["Erledigt"] += 1
-                if not r["due_date"]: counts["Später"] += 1
-                else:
+                if r["due_date"]:
                     d = datetime.strptime(r["due_date"], "%Y-%m-%d").date()
                     if d == today: counts["Heute"] += 1
-                    elif d <= week_end: counts["Diese Woche"] += 1
-                    else: counts["Später"] += 1
-            for k,v in counts.items():
-                self.overview_labels[k].setText(str(v))
+                    elif today < d <= week_end: counts["Diese Woche"] += 1
+                    elif d > week_end: counts["Später"] += 1
+                else: counts["Später"] += 1
+            for k,v in counts.items(): self.overview_labels[k].setText(str(v))
+        if hasattr(self, "undo_button"): self.undo_button.setEnabled(bool(latest_backup()))
