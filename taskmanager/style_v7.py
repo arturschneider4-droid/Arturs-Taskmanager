@@ -6,7 +6,7 @@ inside the task workspace. Business logic remains in ui.py/db.py.
 """
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QHeaderView, QLineEdit, QLabel, QPushButton, QVBoxLayout, QWidget, QAbstractItemView
 
 
 V7_STYLE = r"""
@@ -50,7 +50,7 @@ QTableWidget { background: #FFFFFF; border: 0; gridline-color: transparent; outl
 QTableWidget::item { padding: 8px 9px; border-bottom: 1px solid #EEF2F4; }
 QTableWidget::item:hover { background: #F7FAFC; }
 QTableWidget::item:selected { background: #EAF3F8; color: #173A55; }
-QHeaderView::section { background: #FFFFFF; color: #7A8992; border: 0; border-bottom: 1px solid #DCE4E9; padding: 8px 9px; font-size: 8pt; font-weight: 700; }
+QHeaderView::section { background: #FFFFFF; color: #7A8992; border: 0; border-bottom: 1px solid #DCE4E9; padding: 8px 7px; font-size: 8pt; font-weight: 700; }
 QLineEdit, QComboBox, QDateEdit, QTextEdit { background: #FFFFFF; color: #253746; border: 1px solid #D4DEE4; border-radius: 6px; padding: 7px 9px; }
 QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QTextEdit:focus { border-color: #1689C5; }
 QPushButton#primary { background: #0050A4; color: #FFFFFF; border: 0; border-radius: 6px; padding: 8px 13px; font-weight: 700; }
@@ -91,6 +91,42 @@ def _set_active(window, key):
         button.style().unpolish(button)
         button.style().polish(button)
         button.update()
+
+
+def _configure_task_table(window):
+    """Keep task columns inside their own boundaries at every usable width."""
+    table = getattr(window, "table", None)
+    if table is None:
+        return
+    table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+    table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+    table.setWordWrap(False)
+    table.setTextElideMode(Qt.ElideRight)
+    header = table.horizontalHeader()
+    header.setMinimumSectionSize(34)
+    header.setStretchLastSection(False)
+    fixed = {0: 34, 2: 105, 3: 88, 4: 92, 5: 80, 6: 44}
+    header.setSectionResizeMode(0, QHeaderView.Fixed)
+    header.setSectionResizeMode(1, QHeaderView.Stretch)
+    for column in (2, 3, 4, 5, 6):
+        header.setSectionResizeMode(column, QHeaderView.Fixed)
+        table.setColumnWidth(column, fixed[column])
+    table.setColumnWidth(0, fixed[0])
+    table.setColumnWidth(1, max(180, table.viewport().width() - sum(fixed.values())))
+
+
+def _configure_task_splitter(window):
+    """Prevent the detail editor from collapsing and keep both panes usable."""
+    splitter = getattr(window, "editor", None)
+    if splitter is None:
+        return
+    parent = splitter.parentWidget()
+    if parent is None or not hasattr(parent, "setChildrenCollapsible"):
+        return
+    parent.setChildrenCollapsible(False)
+    splitter.setMinimumWidth(350)
+    splitter.setMaximumWidth(430)
+    parent.setSizes([max(420, parent.width() - 370), 370])
 
 
 def rebuild_professional_shell(window):
@@ -165,4 +201,9 @@ def rebuild_professional_shell(window):
     body_lay.addWidget(workspace, 1); outer.addWidget(body, 1)
     editor = getattr(window, "editor", None)
     if editor is not None: editor.setObjectName("v7Detail")
-    window.setCentralWidget(root); _set_active(window, "tasks"); window.set_view("tasks")
+    window.setCentralWidget(root)
+    window.setMinimumSize(1080, 760)
+    _configure_task_table(window)
+    _configure_task_splitter(window)
+    _set_active(window, "tasks")
+    window.set_view("tasks")
