@@ -4,7 +4,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FIX = ROOT / "taskmanager" / "responsive_table_v7.py"
 APP = ROOT / "taskmanager" / "app.py"
-UI = ROOT / "taskmanager" / "ui.py"
 
 
 def test_responsive_table_reserves_space_for_embedded_widgets():
@@ -28,8 +27,8 @@ def test_final_window_size_prevents_impossible_splitter_layout():
     assert "w.setMinimumSize(1260, 760)" in text
 
 
-def test_theme_badge_cannot_overflow_its_table_cell():
-    text = UI.read_text(encoding="utf-8")
-    assert "QSizePolicy.Ignored, QSizePolicy.Fixed" in text
-    assert "setMaximumWidth(100)" in text
-    assert "setToolTip(text or \"Ohne Themengebiet\")" in text
+def test_embedded_task_controls_are_bounded_to_their_columns():
+    text = FIX.read_text(encoding="utf-8")
+    assert "setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)" in text
+    assert "widget.setMaximumWidth(width - 8)" in text
+    assert "table.setCellWidget" in text
