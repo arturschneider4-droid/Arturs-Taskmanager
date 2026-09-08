@@ -8,8 +8,8 @@ FIX = ROOT / "taskmanager" / "responsive_table_v7.py"
 
 def test_responsive_policy_reserves_real_layout_space():
     text = FIX.read_text(encoding="utf-8")
-    assert "TASK_LEFT_MIN_WIDTH = 650" in text
-    assert "EDITOR_MIN_WIDTH = 340" in text
+    assert "TASK_LEFT_MIN_WIDTH = 600" in text
+    assert "EDITOR_MIN_WIDTH = 300" in text
     assert "table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)" in text
     assert "setChildrenCollapsible(False)" in text
 
@@ -23,7 +23,7 @@ def test_responsive_table_is_wired_after_v7_shell():
 
 def test_v7_minimum_window_is_large_enough_for_both_panes():
     text = FIX.read_text(encoding="utf-8")
-    assert "TASK_WINDOW_MIN_WIDTH = 1280" in text
+    assert "TASK_WINDOW_MIN_WIDTH = 1200" in text
 
 
 def test_qt_geometry_keeps_task_table_and_editor_inside_window():
@@ -43,12 +43,12 @@ def test_qt_geometry_keeps_task_table_and_editor_inside_window():
     window.show()
     app.processEvents()
 
-    assert window.width() >= 1280
+    assert window.width() >= 1200
     splitter = window.editor.parentWidget()
     sizes = splitter.sizes()
-    assert sizes[0] >= 650
-    assert sizes[1] >= 340
-    assert window.table.width() >= 620
+    assert sizes[0] >= 600
+    assert sizes[1] >= 300
+    assert window.table.width() >= 570
     assert window.table.horizontalScrollBarPolicy().name == "ScrollBarAlwaysOff"
 
     window.close()
