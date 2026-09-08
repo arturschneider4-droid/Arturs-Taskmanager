@@ -8,7 +8,7 @@ APP = ROOT / "taskmanager" / "app.py"
 
 def test_responsive_table_reserves_space_for_embedded_widgets():
     text = FIX.read_text(encoding="utf-8")
-    assert "TASK_FIXED_WIDTHS = {0: 32, 2: 100, 3: 95, 4: 100, 5: 85, 6: 44}" in text
+    assert "TASK_FIXED_WIDTHS = {0: 32, 2: 100, 3: 95, 4: 100, 5: 85, 6: 50}" in text
     assert "TASK_LEFT_MIN_WIDTH = 650" in text
     assert "EDITOR_MIN_WIDTH = 340" in text
     assert "EDITOR_MAX_WIDTH = 400" in text
