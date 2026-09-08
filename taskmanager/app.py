@@ -26,6 +26,10 @@ def main():
     apply_v64_visuals(w)
     rebuild_professional_shell(w)
     configure_responsive_task_area(w)
+    # The task table and editor contain fixed-size interactive controls.
+    # Below this width there is no honest layout in which every control can
+    # remain visible, so the window stops before the UI starts overlapping.
+    w.setMinimumSize(1260, 760)
     w.setWindowTitle(f"Arturs Taskmanager V{VERSION}")
     w.show()
     sys.exit(a.exec())
