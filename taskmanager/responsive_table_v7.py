@@ -1,10 +1,10 @@
-from PySide6.QtCore import QObject, QEvent, Qt
+from PySide6.QtCore import QObject, QEvent, Qt, QTimer
 from PySide6.QtWidgets import QHeaderView, QAbstractItemView, QSizePolicy
 
 
 # The embedded task-cell controls need a real minimum width. Below this
 # threshold Qt starts squeezing the splitter and the controls can overlap.
-TASK_FIXED_WIDTHS = {0: 32, 2: 100, 3: 95, 4: 100, 5: 85, 6: 44}
+TASK_FIXED_WIDTHS = {0: 32, 2: 100, 3: 95, 4: 100, 5: 85, 6: 50}
 TASK_LEFT_MIN_WIDTH = 650
 EDITOR_MIN_WIDTH = 340
 EDITOR_MAX_WIDTH = 400
@@ -23,6 +23,10 @@ def _bound_embedded_task_controls(table):
             widget.setMaximumWidth(width - 8)
             widget.setMinimumWidth(0)
             widget.updateGeometry()
+
+
+def _schedule_cell_bounds(table):
+    QTimer.singleShot(0, lambda: _bound_embedded_task_controls(table))
 
 
 def configure_responsive_task_area(window):
@@ -55,6 +59,11 @@ def configure_responsive_task_area(window):
     table.setSelectionBehavior(QAbstractItemView.SelectRows)
     table.horizontalScrollBar().setValue(0)
     _bound_embedded_task_controls(table)
+
+    model = table.model()
+    if model is not None and not getattr(table, "_responsive_rows_hooked", False):
+        model.rowsInserted.connect(lambda *_: _schedule_cell_bounds(table))
+        table._responsive_rows_hooked = True
 
     splitter = left.parentWidget() if left is not None else None
     if splitter is not None and hasattr(splitter, "setChildrenCollapsible"):
