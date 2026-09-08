@@ -2,26 +2,30 @@ from PySide6.QtCore import QObject, QEvent, Qt, QTimer
 from PySide6.QtWidgets import QHeaderView, QAbstractItemView, QSizePolicy
 
 
-# The embedded task-cell controls need a real minimum width. Below this
-# threshold Qt starts squeezing the splitter and the controls can overlap.
+# The table must retain enough room for the title column while every embedded
+# control remains inside its own cell. These dimensions are deliberately small
+# enough to keep the complete task workspace usable on a reduced window.
 TASK_FIXED_WIDTHS = {0: 32, 2: 100, 3: 95, 4: 100, 5: 85, 6: 50}
-TASK_LEFT_MIN_WIDTH = 650
-EDITOR_MIN_WIDTH = 340
+TASK_LEFT_MIN_WIDTH = 600
+EDITOR_MIN_WIDTH = 300
 EDITOR_MAX_WIDTH = 400
+TASK_WINDOW_MIN_WIDTH = 1200
 
 
 def _bound_embedded_task_controls(table):
-    """Prevent cell widgets from imposing their own minimum width."""
+    """Keep every cell widget inside its column without horizontal overflow."""
     for column, width in TASK_FIXED_WIDTHS.items():
-        if column == 1:
-            continue
         for row in range(table.rowCount()):
             widget = table.cellWidget(row, column)
             if widget is None:
                 continue
             widget.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
-            widget.setMaximumWidth(width - 8)
             widget.setMinimumWidth(0)
+            widget.setMaximumWidth(max(1, width - 6))
+            layout = widget.layout()
+            if layout is not None:
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout.setSpacing(0)
             widget.updateGeometry()
 
 
@@ -34,6 +38,8 @@ def configure_responsive_task_area(window):
     editor = getattr(window, "editor", None)
     if table is None or editor is None:
         return
+
+    window.setMinimumSize(TASK_WINDOW_MIN_WIDTH, 760)
 
     left = table.parentWidget()
     if left is not None:
@@ -48,8 +54,7 @@ def configure_responsive_task_area(window):
     header.setSectionResizeMode(0, QHeaderView.Fixed)
     header.setSectionResizeMode(1, QHeaderView.Stretch)
     for column, width in TASK_FIXED_WIDTHS.items():
-        if column != 0:
-            header.setSectionResizeMode(column, QHeaderView.Fixed)
+        header.setSectionResizeMode(column, QHeaderView.Fixed)
         table.setColumnWidth(column, width)
 
     table.setWordWrap(False)
