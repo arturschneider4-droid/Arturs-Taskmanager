@@ -1,5 +1,5 @@
 from PySide6.QtCore import QObject, QEvent, Qt
-from PySide6.QtWidgets import QHeaderView, QAbstractItemView
+from PySide6.QtWidgets import QHeaderView, QAbstractItemView, QSizePolicy
 
 
 # The embedded task-cell controls need a real minimum width. Below this
@@ -8,6 +8,21 @@ TASK_FIXED_WIDTHS = {0: 32, 2: 100, 3: 95, 4: 100, 5: 85, 6: 44}
 TASK_LEFT_MIN_WIDTH = 650
 EDITOR_MIN_WIDTH = 340
 EDITOR_MAX_WIDTH = 400
+
+
+def _bound_embedded_task_controls(table):
+    """Prevent cell widgets from imposing their own minimum width."""
+    for column, width in TASK_FIXED_WIDTHS.items():
+        if column == 1:
+            continue
+        for row in range(table.rowCount()):
+            widget = table.cellWidget(row, column)
+            if widget is None:
+                continue
+            widget.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
+            widget.setMaximumWidth(width - 8)
+            widget.setMinimumWidth(0)
+            widget.updateGeometry()
 
 
 def configure_responsive_task_area(window):
@@ -39,6 +54,7 @@ def configure_responsive_task_area(window):
     table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
     table.setSelectionBehavior(QAbstractItemView.SelectRows)
     table.horizontalScrollBar().setValue(0)
+    _bound_embedded_task_controls(table)
 
     splitter = left.parentWidget() if left is not None else None
     if splitter is not None and hasattr(splitter, "setChildrenCollapsible"):
@@ -65,4 +81,5 @@ class _TaskAreaController(QObject):
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Resize:
             self.table.horizontalScrollBar().setValue(0)
+            _bound_embedded_task_controls(self.table)
         return super().eventFilter(obj, event)
