@@ -2,10 +2,12 @@ from PySide6.QtCore import QObject, QEvent, Qt
 from PySide6.QtWidgets import QHeaderView, QAbstractItemView
 
 
-TASK_FIXED_WIDTHS = {0: 30, 2: 90, 3: 85, 4: 85, 5: 70, 6: 40}
-TASK_LEFT_MIN_WIDTH = 500
-EDITOR_MIN_WIDTH = 300
-EDITOR_MAX_WIDTH = 380
+# The embedded task-cell controls need a real minimum width. Below this
+# threshold Qt starts squeezing the splitter and the controls can overlap.
+TASK_FIXED_WIDTHS = {0: 32, 2: 100, 3: 95, 4: 100, 5: 85, 6: 44}
+TASK_LEFT_MIN_WIDTH = 650
+EDITOR_MIN_WIDTH = 340
+EDITOR_MAX_WIDTH = 400
 
 
 def configure_responsive_task_area(window):
