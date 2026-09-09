@@ -34,10 +34,13 @@ def test_v7_shell_keeps_legacy_refresh_dependencies_alive():
     window.close()
 
 
-def test_v7_startup_preserves_legacy_shell_lifetime():
+def test_v7_startup_preserves_legacy_shell_lifetime_and_utilities():
     text = APP.read_text(encoding="utf-8")
     assert "legacy_shell = w.centralWidget()" in text
     assert "w._v7_legacy_shell = legacy_shell" in text
+    assert "_install_v7_secondary_actions(w)" in text
+    assert "window.export_excel" in text
+    assert 'version_label.setText(f"V{VERSION}")' in text
 
 
 def test_v7_themes_navigation_and_task_navigation_share_one_stack():
