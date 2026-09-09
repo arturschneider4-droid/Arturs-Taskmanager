@@ -24,7 +24,12 @@ def main():
     install_overview_navigation(w)
     apply_v63_visuals(w)
     apply_v64_visuals(w)
+    # V7 replaces the legacy central widget. Keep that widget alive because
+    # refresh logic still uses a few non-visible legacy controls (theme search
+    # and overview counters) as data/UI dependencies.
+    legacy_shell = w.centralWidget()
     rebuild_professional_shell(w)
+    w._v7_legacy_shell = legacy_shell
     configure_responsive_task_area(w)
     # The task table and editor contain fixed-size interactive controls.
     # Below this width there is no honest layout in which every control can
