@@ -2,7 +2,7 @@ from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QFormLayout, QLineEdit, QComboBox, QDateEdit,
     QTextEdit, QListWidget, QListWidgetItem, QPushButton, QHBoxLayout,
-    QDialogButtonBox, QLabel, QInputDialog
+    QDialogButtonBox, QLabel, QInputDialog, QCheckBox
 )
 from .constants import PRIORITIES, STATUS, RECURRENCE
 from .db import connect, subs
@@ -36,6 +36,13 @@ class TaskDialog(QDialog):
         self.due.setCalendarPopup(True)
         self.due.setDisplayFormat("dd.MM.yyyy")
         self.due.setDate(QDate.fromString(task["due_date"], "yyyy-MM-dd") if task and task["due_date"] else QDate.currentDate())
+        self.no_due = QCheckBox("Keine Fälligkeit")
+        self.no_due.setChecked(bool(task and not task["due_date"]))
+        self.no_due.toggled.connect(self.due.setDisabled)
+        self.due.setDisabled(self.no_due.isChecked())
+        due_row = QHBoxLayout()
+        due_row.addWidget(self.due, 1)
+        due_row.addWidget(self.no_due)
         self.status = QComboBox()
         self.status.addItems(STATUS)
         if task:
@@ -49,7 +56,7 @@ class TaskDialog(QDialog):
         self.desc.setMinimumHeight(90)
         for label, w in [
             ("Aufgabe", self.title), ("Themengebiet", self.project),
-            ("Priorität", self.priority), ("Fälligkeit", self.due),
+            ("Priorität", self.priority), ("Fälligkeit", due_row),
             ("Status", self.status), ("Wiederholung", self.recurrence),
             ("Beschreibung", self.desc)
         ]:
@@ -65,17 +72,19 @@ class TaskDialog(QDialog):
                 it.setFlags(it.flags() | Qt.ItemIsUserCheckable | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 it.setCheckState(Qt.Checked if r["done"] else Qt.Unchecked)
                 self.subs.addItem(it)
-        self.subs.itemDoubleClicked.connect(self.edit_sub)
+        self.subs.itemDoubleClicked.connect(self.edit_subtask)
+        self.subs.currentItemChanged.connect(self._update_sub_buttons)
         row.addWidget(self.subs, 1)
         col = QVBoxLayout()
         add = QPushButton("＋ Hinzufügen")
         add.clicked.connect(self.add_sub)
-        edit = QPushButton("Bearbeiten")
-        edit.clicked.connect(self.edit_sub)
+        self.edit_sub = QPushButton("Bearbeiten")
+        self.edit_sub.setEnabled(False)
+        self.edit_sub.clicked.connect(lambda _=False: self.edit_subtask())
         remove = QPushButton("Löschen")
         remove.clicked.connect(self.remove_sub)
         col.addWidget(add)
-        col.addWidget(edit)
+        col.addWidget(self.edit_sub)
         col.addWidget(remove)
         col.addStretch()
         row.addLayout(col)
@@ -85,7 +94,11 @@ class TaskDialog(QDialog):
         b.accepted.connect(self.accept)
         b.rejected.connect(self.reject)
         root.addWidget(b)
+        self._update_sub_buttons(self.subs.currentItem())
         self.title.setFocus()
+
+    def _update_sub_buttons(self, item, *_):
+        self.edit_sub.setEnabled(item is not None)
 
     def add_sub(self):
         t, ok = QInputDialog.getText(self, "Unteraufgabe", "Unteraufgabe:")
@@ -96,8 +109,8 @@ class TaskDialog(QDialog):
             self.subs.addItem(it)
             self.subs.setCurrentItem(it)
 
-    def edit_sub(self, item=None):
-        item = item or self.subs.currentItem()
+    def edit_subtask(self):
+        item = self.subs.currentItem()
         if item is None:
             return
         t, ok = QInputDialog.getText(self, "Unteraufgabe bearbeiten", "Unteraufgabe:", text=item.text())
@@ -108,13 +121,15 @@ class TaskDialog(QDialog):
         i = self.subs.currentRow()
         if i >= 0:
             self.subs.takeItem(i)
+        self._update_sub_buttons(self.subs.currentItem())
 
     def values(self):
+        self.due.interpretText()
         return {
             "title": self.title.text().strip(),
             "project_id": self.project.currentData(),
             "priority": self.priority.currentData(),
-            "due_date": self.due.date().toString("yyyy-MM-dd"),
+            "due_date": None if self.no_due.isChecked() else self.due.date().toString("yyyy-MM-dd"),
             "status": self.status.currentText(),
             "recurrence": self.recurrence.currentData(),
             "description": self.desc.toPlainText().strip(),
