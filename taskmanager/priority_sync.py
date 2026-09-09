@@ -1,19 +1,22 @@
-"""V6.2.1 priority synchronization patch.
+"""Immediate UI synchronization patches for task priority and editing.
 
-The editor's Eisenhower priority cards are immediate actions. This module
-keeps that action separate from the normal Save operation so unsaved title,
-description, due date, status, and subtasks are not lost when priority changes.
+The editor actions persist through the normal SQLite layer, then explicitly
+synchronize the visible task table so the desktop view never depends on a
+stale selection/model state.
 """
 
-from .constants import PRIORITIES
+from datetime import date
+
+from .constants import PRIORITIES, THEME_COLORS
 from .db import backup_db, task, update_priority
-from .ui import MainWindow, TrafficLight, ThemeBadge, StatusBadge
+from .ui import MainWindow, TrafficLight
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QWidget, QTableWidgetItem
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtWidgets import QHBoxLayout, QWidget
+from PySide6.QtGui import QColor
 
 
 _original_editor_priority = MainWindow._editor_priority
+_original_edit_task = MainWindow.edit_task
 
 
 def _synced_editor_priority(self, key):
@@ -28,13 +31,10 @@ def _synced_editor_priority(self, key):
     if not current or current["priority"] == key:
         return
 
-    # Priority is an explicit immediate action, so persist it independently of
-    # the other editor fields, which may still contain unsaved changes.
     backup_db("before_priority_change")
     update_priority(tid, key)
     self.selected_task = tid
 
-    # Update the visible task-list priority cell without reloading the editor.
     if hasattr(self, "table"):
         for row in range(self.table.rowCount()):
             item = self.table.item(row, 1)
@@ -49,8 +49,6 @@ def _synced_editor_priority(self, key):
                 self.table.setCellWidget(row, 3, cell)
                 break
 
-    # Other views derive their priority from SQLite and can therefore be
-    # refreshed safely without touching the editor fields.
     if hasattr(self, "kcols"):
         self.refresh_kanban()
     if hasattr(self, "ecols"):
@@ -66,9 +64,46 @@ def _synced_editor_priority(self, key):
         self.statusBar().showMessage("Priorität gespeichert", 1800)
 
 
+def _sync_due_visuals(self):
+    """Color today's and overdue due dates after the normal table rebuild."""
+    if not hasattr(self, "table"):
+        return
+    today = date.today().isoformat()
+    for row in range(self.table.rowCount()):
+        item = self.table.item(row, 1)
+        due_item = self.table.item(row, 4)
+        if not item or not due_item:
+            continue
+        tid = item.data(Qt.UserRole)
+        current = task(tid) if tid is not None else None
+        due = current["due_date"] if current else None
+        if due and due < today:
+            due_item.setForeground(QColor(THEME_COLORS["red"]))
+        elif due == today:
+            due_item.setForeground(QColor(THEME_COLORS["red"]))
+
+
+def _synced_edit_task(self, tid):
+    """Run the existing editor, then force a complete visible task refresh."""
+    _original_edit_task(self, tid)
+    if not task(tid):
+        return
+    self.selected_task = tid
+    self.refresh_all()
+    _sync_due_visuals(self)
+    for row in range(self.table.rowCount()):
+        item = self.table.item(row, 1)
+        if item and item.data(Qt.UserRole) == tid:
+            self.table.selectRow(row)
+            self.table.scrollToItem(item)
+            self.table.viewport().update()
+            break
+
+
 MainWindow._editor_priority = _synced_editor_priority
+MainWindow.edit_task = _synced_edit_task
 
 
 def apply_priority_sync():
-    """Compatibility entry point; importing this module applies the patch."""
+    """Compatibility entry point; importing this module applies both patches."""
     return MainWindow._editor_priority
