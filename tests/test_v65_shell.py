@@ -25,5 +25,5 @@ def test_v7_replaces_v65_shell_at_runtime():
     app = Path("taskmanager/app.py").read_text(encoding="utf-8")
     assert "style_v7" in app
     assert "V7_STYLE" in app
-    assert 'VERSION = "7.0"' in app
+    assert 'VERSION = "7.1"' in app
     assert "rebuild_professional_shell" in app
