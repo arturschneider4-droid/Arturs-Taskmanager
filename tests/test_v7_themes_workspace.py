@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,3 +25,25 @@ def test_themes_workspace_exposes_create_edit_delete_actions():
     assert "window.new_project" in text
     assert "window.edit_project" in text
     assert "window.delete_project" in text
+
+
+def test_themes_navigation_switches_to_the_dedicated_page():
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+    from taskmanager.db import init_db
+    from taskmanager.ui import MainWindow
+    from taskmanager.style_v7 import rebuild_professional_shell
+
+    app = QApplication.instance() or QApplication([])
+    init_db()
+    window = MainWindow()
+    rebuild_professional_shell(window)
+    window.set_view("themes")
+    app.processEvents()
+
+    current = window.stack.currentWidget()
+    assert current.objectName() == "v7ThemesWorkspace"
+    assert window.title_label.text() == "Themengebiete"
+
+    window.close()
+    app.processEvents()
