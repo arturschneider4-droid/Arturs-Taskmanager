@@ -13,9 +13,10 @@ def test_v7_has_a_dedicated_themes_workspace():
 
 def test_themes_navigation_is_a_real_stack_view():
     text = STYLE.read_text(encoding="utf-8")
-    assert '"themes": 4' in text
-    assert '"themes": "Themengebiete"' in text
-    assert 'window.stack.addWidget(themes_page)' in text
+    assert "themes_page = _build_themes_workspace(window)" in text
+    assert "stack.addWidget(themes_page)" in text
+    assert "stack.setCurrentWidget(themes_page)" in text
+    assert 'window.title_label.setText("Themengebiete")' in text
 
 
 def test_themes_workspace_exposes_create_edit_delete_actions():
