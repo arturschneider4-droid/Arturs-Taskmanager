@@ -12,7 +12,7 @@ from .db import backup_db, task, update_priority
 from .ui import MainWindow, TrafficLight
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QWidget
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QFont
 
 
 _original_editor_priority = MainWindow._editor_priority
