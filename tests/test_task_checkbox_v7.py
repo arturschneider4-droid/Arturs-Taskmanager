@@ -3,42 +3,40 @@ import os
 
 def test_task_checkbox_click_changes_status():
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    from PySide6.QtCore import Qt
+    from PySide6.QtCore import Qt, QObject
     from PySide6.QtTest import QTest
-    from PySide6.QtWidgets import QApplication
-    from taskmanager.db import init_db, save, task
-    from taskmanager.ui import MainWindow
-    from taskmanager.style_v7 import rebuild_professional_shell
-    from taskmanager.responsive_table_v7 import configure_responsive_task_area
+    from PySide6.QtWidgets import QApplication, QCheckBox, QHBoxLayout, QTableWidget, QTableWidgetItem, QWidget
+    from taskmanager.responsive_table_v7 import _TaskAreaController, _install_task_checkbox_controller
 
     app = QApplication.instance() or QApplication([])
-    init_db()
-    tid = save({
-        "title": "Checkbox-Test",
-        "description": "",
-        "project_id": None,
-        "priority": "important_not_urgent",
-        "due_date": None,
-        "status": "Offen",
-        "recurrence": "none",
-        "subtasks": [],
-    }, make_backup=False)
 
-    window = MainWindow()
-    rebuild_professional_shell(window)
-    configure_responsive_task_area(window)
-    window.selected_task = tid
-    window.refresh_all()
-    window.show()
+    window = QObject()
+    calls = []
+    window.set_status = lambda tid, status: calls.append((tid, status))
+
+    table = QTableWidget(1, 2)
+    item = QTableWidgetItem("Aufgabe")
+    item.setData(Qt.UserRole, 123)
+    table.setItem(0, 1, item)
+
+    cell = QWidget()
+    layout = QHBoxLayout(cell)
+    layout.setContentsMargins(0, 0, 0, 0)
+    checkbox = QCheckBox(cell)
+    checkbox.setChecked(False)
+    layout.addWidget(checkbox)
+    table.setCellWidget(0, 0, cell)
+
+    controller = _TaskAreaController(window, table, None)
+    _install_task_checkbox_controller(controller)
+    table.show()
     app.processEvents()
 
-    row = next(i for i in range(window.table.rowCount()) if window.table.item(i, 1).data(Qt.UserRole) == tid)
-    cell = window.table.cellWidget(row, 0)
-    assert cell is not None
-
-    QTest.mouseClick(cell, Qt.LeftButton)
+    QTest.mouseClick(cell, Qt.LeftButton, pos=cell.rect().center())
     app.processEvents()
+    assert calls[-1] == (123, "Erledigt")
 
-    assert task(tid)["status"] == "Erledigt"
-    window.close()
+    checkbox.setChecked(True)
+    QTest.mouseClick(cell, Qt.LeftButton, pos=cell.rect().center())
     app.processEvents()
+    assert calls[-1] == (123, "Offen")
