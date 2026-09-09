@@ -35,4 +35,4 @@ def test_app_uses_v7_as_active_shell():
     text = APP.read_text(encoding="utf-8")
     assert "style_v7" in text
     assert "rebuild_professional_shell" in text
-    assert 'VERSION = "7.0"' in text
+    assert 'VERSION = "7.1"' in text
