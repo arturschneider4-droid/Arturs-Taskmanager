@@ -45,6 +45,11 @@ QLineEdit#v7Filter:focus, QComboBox#v7Filter:focus { border-color: #78AFC8; }
 QPushButton#v7Tool { background: #FFFFFF; border: 1px solid #D5DFE5; border-radius: 6px; padding: 7px 10px; color: #425762; font-weight: 600; }
 QPushButton#v7Tool:hover { background: #F2F6F8; }
 #v7Detail { background: #FFFFFF; border: 1px solid #DCE4E9; border-radius: 8px; }
+#v7ThemesWorkspace { background: transparent; }
+#v7ThemesCard { background: #FFFFFF; border: 1px solid #DCE4E9; border-radius: 8px; }
+#v7ThemesCardTitle { color: #173A55; font-size: 12pt; font-weight: 700; }
+#v7ThemesCardMeta { color: #788790; font-size: 9pt; }
+#v7ThemesEmpty { color: #788790; background: #FFFFFF; border: 1px dashed #C8D4DB; border-radius: 8px; padding: 28px; }
 .card { background: #FFFFFF; border: 1px solid #DCE4E9; border-radius: 8px; }
 QTableWidget { background: #FFFFFF; border: 0; gridline-color: transparent; outline: none; }
 QTableWidget::item { padding: 8px 9px; border-bottom: 1px solid #EEF2F4; }
@@ -129,6 +134,84 @@ def _configure_task_splitter(window):
     parent.setSizes([max(420, parent.width() - 370), 370])
 
 
+def _build_themes_workspace(window):
+    """Create a real Themes workspace using the existing project actions."""
+    page = QWidget()
+    page.setObjectName("v7ThemesWorkspace")
+    outer = QVBoxLayout(page)
+    outer.setContentsMargins(0, 0, 0, 0)
+    outer.setSpacing(12)
+
+    toolbar = QFrame()
+    toolbar.setObjectName("card")
+    tl = QHBoxLayout(toolbar)
+    tl.setContentsMargins(14, 10, 14, 10)
+    title = QLabel("Themengebiete")
+    title.setObjectName("v7ThemesCardTitle")
+    subtitle = QLabel("Themen verwalten und Aufgaben thematisch organisieren")
+    subtitle.setObjectName("v7ThemesCardMeta")
+    tl.addWidget(title)
+    tl.addSpacing(10)
+    tl.addWidget(subtitle)
+    tl.addStretch()
+    add = QPushButton("＋  Neues Themengebiet")
+    add.setObjectName("primary")
+    add.clicked.connect(window.new_project)
+    tl.addWidget(add)
+    outer.addWidget(toolbar)
+
+    content = QWidget()
+    content_layout = QVBoxLayout(content)
+    content_layout.setContentsMargins(0, 0, 0, 0)
+    content_layout.setSpacing(8)
+    page._themes_content_layout = content_layout
+    outer.addWidget(content, 1)
+
+    def refresh():
+        while content_layout.count():
+            item = content_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        items = []
+        for row in range(window.projects.count()):
+            item = window.projects.item(row)
+            pid = item.data(Qt.UserRole)
+            if pid is not None:
+                items.append((pid, item.text().replace("▦  ", "", 1)))
+        if not items:
+            empty = QLabel("Noch keine Themengebiete vorhanden.\nLege dein erstes Themengebiet an, um Aufgaben zu strukturieren.")
+            empty.setObjectName("v7ThemesEmpty")
+            empty.setAlignment(Qt.AlignCenter)
+            content_layout.addWidget(empty)
+        else:
+            for pid, name in items:
+                card = QFrame()
+                card.setObjectName("v7ThemesCard")
+                row = QHBoxLayout(card)
+                row.setContentsMargins(14, 10, 14, 10)
+                info = QVBoxLayout()
+                label = QLabel(name)
+                label.setObjectName("v7ThemesCardTitle")
+                meta = QLabel("Themengebiet · Aufgaben können diesem Thema zugeordnet werden")
+                meta.setObjectName("v7ThemesCardMeta")
+                info.addWidget(label)
+                info.addWidget(meta)
+                row.addLayout(info, 1)
+                edit = QPushButton("Bearbeiten")
+                edit.setObjectName("soft")
+                edit.clicked.connect(lambda _=False, p=pid: (window.edit_project(p), refresh()))
+                remove = QPushButton("Löschen")
+                remove.setObjectName("soft")
+                remove.clicked.connect(lambda _=False, p=pid: (window.delete_project(p), refresh()))
+                row.addWidget(edit)
+                row.addWidget(remove)
+                content_layout.addWidget(card)
+            content_layout.addStretch(1)
+
+    page.refresh_themes_workspace = refresh
+    return page
+
+
 def rebuild_professional_shell(window):
     """Build the V7 shell around existing functional widgets."""
     old = window.centralWidget()
@@ -198,6 +281,8 @@ def rebuild_professional_shell(window):
         filters.addWidget(widget, 1 if width == 0 else 0)
     wl.addLayout(filters)
     stack = window.stack; stack.setParent(workspace); wl.addWidget(stack, 1)
+    themes_page = _build_themes_workspace(window)
+    stack.addWidget(themes_page)
     body_lay.addWidget(workspace, 1); outer.addWidget(body, 1)
     editor = getattr(window, "editor", None)
     if editor is not None: editor.setObjectName("v7Detail")
@@ -205,5 +290,21 @@ def rebuild_professional_shell(window):
     window.setMinimumSize(1080, 760)
     _configure_task_table(window)
     _configure_task_splitter(window)
+
+    # Wrap only navigation. All existing task/Kanban/Eisenhower/Planning logic
+    # remains in MainWindow.set_view; Themes gets the fifth stack page here.
+    original_set_view = window.set_view
+    if not getattr(window, "_v7_themes_navigation", False):
+        def v7_set_view(key):
+            if key == "themes":
+                stack.setCurrentWidget(themes_page)
+                window.title_label.setText("Themengebiete")
+                themes_page.refresh_themes_workspace()
+                _set_active(window, key)
+                return
+            original_set_view(key)
+            _set_active(window, key)
+        window.set_view = v7_set_view
+        window._v7_themes_navigation = True
     _set_active(window, "tasks")
     window.set_view("tasks")
