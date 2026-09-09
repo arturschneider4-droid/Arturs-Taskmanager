@@ -4,6 +4,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DIALOGS = ROOT / "taskmanager" / "dialogs.py"
 UI = ROOT / "taskmanager" / "ui.py"
 DB = ROOT / "taskmanager" / "db.py"
+SYNC = ROOT / "taskmanager" / "priority_sync.py"
 
 
 def test_subtask_edit_button_is_selection_aware_and_uses_current_item():
@@ -29,9 +30,17 @@ def test_editor_due_date_is_saved_as_iso_date_or_null():
 
 
 def test_overdue_tasks_are_visibly_distinguished():
-    text = UI.read_text(encoding="utf-8")
-    assert "due_date < date.today().isoformat()" in text
+    text = SYNC.read_text(encoding="utf-8")
+    assert "due < today" in text
     assert "THEME_COLORS[\"red\"]" in text
+
+
+def test_edit_task_forces_table_refresh_and_reselection():
+    text = SYNC.read_text(encoding="utf-8")
+    assert "_original_edit_task = MainWindow.edit_task" in text
+    assert "self.refresh_all()" in text
+    assert "self.table.selectRow(row)" in text
+    assert "self.table.scrollToItem(item)" in text
 
 
 def test_due_filter_does_not_mix_unassigned_dates_into_later_bucket():
