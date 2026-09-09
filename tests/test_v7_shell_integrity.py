@@ -1,8 +1,12 @@
 import gc
 import os
+from pathlib import Path
 
 
-def test_v7_shell_keeps_legacy_refresh_dependencies_alive():
+APP = Path(__file__).resolve().parents[1] / "taskmanager" / "app.py"
+
+
+def _build_v7_window():
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from PySide6.QtWidgets import QApplication
 
@@ -13,30 +17,31 @@ def test_v7_shell_keeps_legacy_refresh_dependencies_alive():
     app = QApplication.instance() or QApplication([])
     init_db()
     window = MainWindow()
+    legacy_shell = window.centralWidget()
     rebuild_professional_shell(window)
+    # Mirror the production startup lifetime guard in app.main().
+    window._v7_legacy_shell = legacy_shell
     gc.collect()
     app.processEvents()
+    return app, window
 
-    # refresh_all is part of the normal post-edit/post-filter path and must
-    # remain safe after the V7 shell replaces the legacy central widget.
+
+def test_v7_shell_keeps_legacy_refresh_dependencies_alive():
+    app, window = _build_v7_window()
     window.refresh_all()
     assert window.projects is not None
     assert window.stack is not None
     window.close()
 
 
+def test_v7_startup_preserves_legacy_shell_lifetime():
+    text = APP.read_text(encoding="utf-8")
+    assert "legacy_shell = w.centralWidget()" in text
+    assert "w._v7_legacy_shell = legacy_shell" in text
+
+
 def test_v7_themes_navigation_and_task_navigation_share_one_stack():
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    from PySide6.QtWidgets import QApplication
-
-    from taskmanager.db import init_db
-    from taskmanager.ui import MainWindow
-    from taskmanager.style_v7 import rebuild_professional_shell
-
-    app = QApplication.instance() or QApplication([])
-    init_db()
-    window = MainWindow()
-    rebuild_professional_shell(window)
+    app, window = _build_v7_window()
 
     window.set_view("themes")
     assert window.stack.currentWidget().objectName() == "v7ThemesWorkspace"
