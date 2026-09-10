@@ -21,6 +21,7 @@ def test_planning_drop_targets_get_dates_in_their_named_period(monkeypatch, tmp_
 
     from taskmanager import db
     from taskmanager.ui import MainWindow
+    from taskmanager.workspace_interactions_v7 import apply_workspace_interaction_fixes
 
     monkeypatch.setattr(db, "APP_DIR", tmp_path)
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "tasks.db")
@@ -29,6 +30,7 @@ def test_planning_drop_targets_get_dates_in_their_named_period(monkeypatch, tmp_
 
     app = QApplication.instance() or QApplication([])
     window = MainWindow()
+    apply_workspace_interaction_fixes(window)
     try:
         tid = db.save(_task(), make_backup=False)
         window.drop_moved(tid, "Später")
