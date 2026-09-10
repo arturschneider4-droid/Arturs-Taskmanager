@@ -23,7 +23,7 @@ def test_editor_subtask_buttons_follow_selection_and_edit_selected_item(monkeypa
         item = QListWidgetItem("Alt")
         window.e_subs.addItem(item)
 
-        window.e_subs.clearSelection()
+        window.e_subs.setCurrentItem(None)
         app.processEvents()
         assert not edit.isEnabled()
         assert not remove.isEnabled()
