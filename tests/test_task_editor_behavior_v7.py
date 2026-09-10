@@ -6,10 +6,12 @@ def test_editor_subtask_buttons_follow_selection_and_edit_selected_item(monkeypa
     from PySide6.QtWidgets import QApplication, QListWidgetItem, QPushButton, QInputDialog
 
     from taskmanager.ui import MainWindow
+    from taskmanager.editor_controls_v7 import configure_editor_subtask_controls
 
     app = QApplication.instance() or QApplication([])
     window = MainWindow()
     try:
+        assert configure_editor_subtask_controls(window)
         edit = next(
             b for b in window.editor.findChildren(QPushButton)
             if b.text() == "Bearbeiten"
