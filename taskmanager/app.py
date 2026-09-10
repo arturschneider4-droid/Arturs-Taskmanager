@@ -8,6 +8,7 @@ from .style_v63 import V63_STYLE, apply_v63_visuals
 from .style_v64 import V64_STYLE, apply_v64_visuals
 from .style_v7 import V7_STYLE, rebuild_professional_shell
 from .responsive_table_v7 import configure_responsive_task_area
+from .editor_controls_v7 import configure_editor_subtask_controls
 
 VERSION = "7.1"
 
@@ -53,6 +54,7 @@ def main():
     rebuild_professional_shell(w)
     w._v7_legacy_shell = legacy_shell
     configure_responsive_task_area(w)
+    configure_editor_subtask_controls(w)
     _install_v7_secondary_actions(w)
 
     # V7's themes page is generated from the live project list. Ensure every
