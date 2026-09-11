@@ -2,7 +2,7 @@ name: Build Windows
 
 on:
   push:
-    branches: [ main, 'feature/v64-premium-enterprise', 'feature/v7-professional-desktop-ui' ]
+    branches: [ main, 'feature/v64-premium-enterprise', 'feature/v7-professional-desktop-ui', 'feature/v8-premium-enterprise-ui' ]
   workflow_dispatch:
 
 permissions:
