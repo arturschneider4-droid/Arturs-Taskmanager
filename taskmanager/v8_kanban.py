@@ -1,8 +1,8 @@
 """V8 premium Kanban presentation layer.
 
 The existing Kanban widgets and task business logic remain the source of truth.
-This module only styles and refreshes the already-created status lanes. Its
-responsive presentation is intentionally based on the existing Qt layout.
+This module only styles the already-created status lanes. Its responsive
+presentation is intentionally based on the existing Qt layout.
 """
 
 from PySide6.QtCore import Qt, QTimer
@@ -22,24 +22,14 @@ class V8Kanban:
     def __init__(self, window):
         self.window = window
         self.lanes = getattr(window, "kcols", {})
-        self._refresh_wrapped = False
         self._install()
 
     def _install(self):
         self.apply()
-        refresh = getattr(self.window, "refresh_kanban", None)
-        if callable(refresh) and not getattr(self.window, "_v8_kanban_refresh_wrapped", False):
-            def refresh_v8(*args, **kwargs):
-                result = refresh(*args, **kwargs)
-                self.apply()
-                return result
-            self.window.refresh_kanban = refresh_v8
-            self.window._v8_kanban_refresh_wrapped = True
-            self._refresh_wrapped = True
         QTimer.singleShot(0, self.apply)
 
     def apply(self):
-        """Reapply presentation after the functional refresh path runs."""
+        """Reapply presentation to the functional lane widgets."""
         self.lanes = getattr(self.window, "kcols", self.lanes)
         for status, accent in STATUS_LANES:
             lane = self.lanes.get(status)
