@@ -10,6 +10,7 @@ from .constants import PRIORITY_LIGHTS
 from .v8_interactions import priority_label, responsive_layout
 from .v8_detail_panel import install_v8_detail_panel
 from .v8_kanban import V8Kanban, install_v8_kanban
+from .v8_eisenhower import V8Eisenhower, install_v8_eisenhower
 
 V8_STYLE = r"""
 * { font-family: "Segoe UI"; font-size: 9.5pt; color: #263844; }
@@ -45,6 +46,8 @@ QListWidget#v8Themes::item:selected { background: #E7F1FA; color: #0050A4; font-
 QLineEdit, QComboBox, QDateEdit, QTextEdit { background: #FFFFFF; border: 1px solid #D4DEE4; border-radius: 5px; padding: 6px 8px; }
 QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QTextEdit:focus { border-color: #1689C5; }
 QToolTip { background: #172B3A; color: #FFFFFF; border: 0; padding: 5px 7px; }
+#v8EisenhowerQuadrant { background:#FFFFFF; border:1px solid #DCE4E9; border-radius:8px; }
+#v8EisenhowerTitle { color:#172B3A; padding:8px 4px 4px; font-size:10pt; font-weight:700; }
 """
 
 _NAV = [("▤", "Aufgaben", "tasks"), ("◷", "Heute", "today"), ("▥", "Diese Woche", "week"), ("›", "Später", "later"), ("✓", "Erledigt", "done")]
@@ -192,7 +195,7 @@ def rebuild_v8_shell(window):
     outer.addWidget(top)
     body = QWidget(); body_l = QHBoxLayout(body); body_l.setContentsMargins(0,0,0,0); body_l.setSpacing(0); outer.addWidget(body,1); _build_navigation(window, body_l)
     workspace = QWidget(); workspace.setObjectName("v8Workspace"); wl = QVBoxLayout(workspace); wl.setContentsMargins(18,14,18,14); wl.setSpacing(9); _install_title_and_toolbar(window, wl); _install_task_surface(window, wl); body_l.addWidget(workspace,1)
-    window.setCentralWidget(root); window._v8_workspace = workspace; window._v8_shell = root; window._v8_nav_collapsed = False; window._v8_group = "Keine Gruppierung"; _style_existing_widgets(window); _sync_active_nav(window,"tasks"); install_v8_kanban(window); QTimer.singleShot(0, lambda: _v8_refresh(window)); return root
+    window.setCentralWidget(root); window._v8_workspace = workspace; window._v8_shell = root; window._v8_nav_collapsed = False; window._v8_group = "Keine Gruppierung"; _style_existing_widgets(window); _sync_active_nav(window,"tasks"); install_v8_kanban(window); install_v8_eisenhower(window); QTimer.singleShot(0, lambda: _v8_refresh(window)); return root
 
 
 def _v8_refresh(window):
@@ -200,6 +203,8 @@ def _v8_refresh(window):
     count = getattr(window,"_v8_count",None); table = getattr(window,"table",None)
     if count is not None and table is not None: count.setText(f"{table.rowCount()} Aufgaben")
     for key, button in getattr(window,"_v8_scopes",[]): _set_property(button,"active","true" if getattr(window,"scope","Alle")==key else "false"); button.setChecked(getattr(window,"scope","Alle")==key)
+    controller = getattr(window, "_v8_eisenhower", None)
+    if controller is not None: controller.apply()
 
 
 def install_v8_responsive_behavior(window):
