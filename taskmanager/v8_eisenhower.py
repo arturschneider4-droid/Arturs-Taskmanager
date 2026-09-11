@@ -8,6 +8,7 @@ existing Qt grid layout.
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QFont
+from PySide6.QtWidgets import QLabel
 
 
 QUADRANTS = (
@@ -35,9 +36,8 @@ class V8Eisenhower:
         self.lanes = getattr(self.window, "ecols", self.lanes)
         for priority, title, action in QUADRANTS:
             lane = self.lanes.get(priority)
-            if lane is None:
-                continue
-            self._style_lane(lane, title, action)
+            if lane is not None:
+                self._style_lane(lane, title, action)
 
     @staticmethod
     def _style_lane(lane, title, action):
@@ -49,35 +49,30 @@ class V8Eisenhower:
                 "QFrame#v8EisenhowerQuadrant{background:#FFFFFF;"
                 "border:1px solid #DCE4E9;border-radius:8px;}"
             )
-            labels = parent.findChildren(type(lane.parentWidget().layout().itemAt(0).widget())) if parent.layout() else []
-            for child in parent.findChildren(__import__("PySide6.QtWidgets", fromlist=["QLabel"]).QLabel):
+            for child in parent.findChildren(QLabel):
                 child.setObjectName("v8EisenhowerTitle")
-                child.setText(title)
-                font = QFont(child.font())
-                font.setBold(True)
-                child.setFont(font)
-                child.setToolTip(action)
                 child.setStyleSheet(
                     "QLabel#v8EisenhowerTitle{color:#172B3A;padding:8px 4px 4px;"
                     "font-size:10pt;font-weight:700;}"
                 )
+                child.setToolTip(action)
 
         lane.setObjectName("v8EisenhowerLane")
         lane.setSpacing(7)
-        lane.setContentsMargins(6, 5, 6, 6)
+        lane.setContentsMargins(7, 5, 7, 7)
         lane.setSelectionMode(lane.SelectionMode.SingleSelection)
         lane.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         lane.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         lane.setStyleSheet(
-            "QListWidget#v8EisenhowerLane{background:#FFFFFF;border:0;"
+            "QListWidget#v8EisenhowerLane{background:transparent;border:0;"
             "outline:none;padding:4px;}"
-            "QListWidget#v8EisenhowerLane::item{background:#F8FAFB;"
-            "border:1px solid #E3E9ED;border-radius:6px;padding:9px 10px;"
-            "margin:2px 0;color:#263844;}"
-            "QListWidget#v8EisenhowerLane::item:hover{background:#F1F5F7;"
+            "QListWidget#v8EisenhowerLane::item{background:#FFFFFF;"
+            "border:1px solid #E1E8EC;border-radius:7px;padding:10px 11px;"
+            "margin:1px 0;color:#263844;}"
+            "QListWidget#v8EisenhowerLane::item:hover{background:#F8FAFB;"
             "border-color:#C8D6DE;}"
-            "QListWidget#v8EisenhowerLane::item:selected{background:#E7F1FA;"
-            "border-color:#B8D2E3;color:#172B3A;}"
+            "QListWidget#v8EisenhowerLane::item:selected{background:#EAF3F9;"
+            "border-color:#8FB9D0;color:#172B3A;}"
         )
         for row in range(lane.count()):
             item = lane.item(row)
