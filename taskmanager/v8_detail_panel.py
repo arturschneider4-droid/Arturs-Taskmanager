@@ -16,14 +16,9 @@ class V8DetailPanel(QObject):
     DEFAULT_WIDTH = 380
     NARROW_BREAKPOINT = 960
 
-    # Semantic row roles used by the V8 premium task surface.
     V8_TASK_ROLES = (
-        "v8TaskRow",
-        "v8TaskTitle",
-        "v8TaskMeta",
-        "v8TaskStatus",
-        "v8TaskPriority",
-        "v8TaskDue",
+        "v8TaskRow", "v8TaskTitle", "v8TaskMeta", "v8TaskStatus",
+        "v8TaskPriority", "v8TaskDue",
     )
 
     def __init__(self, window):
@@ -37,6 +32,7 @@ class V8DetailPanel(QObject):
 
         if self.editor is not None:
             self.editor.installEventFilter(self)
+            self._apply_inspector_style()
 
         table = getattr(window, "table", None)
         if table is not None:
@@ -117,8 +113,20 @@ class V8DetailPanel(QObject):
         else:
             self.splitter.setSizes([max(450, total), 0])
 
+    def _apply_inspector_style(self):
+        self.editor.setObjectName("v8Inspector")
+        self.editor.setStyleSheet(
+            "QWidget#v8Inspector{background:#FFFFFF;border-left:1px solid #D9E2E8;}"
+            "QLabel{color:#53656F;}"
+            "QLineEdit,QComboBox,QDateEdit,QTextEdit{background:#FFFFFF;"
+            "border:1px solid #D4DEE4;border-radius:6px;padding:7px 8px;}"
+            "QLineEdit:focus,QComboBox:focus,QDateEdit:focus,QTextEdit:focus{border-color:#1689C5;}"
+            "QPushButton{border:1px solid #D4DEE4;border-radius:6px;padding:7px 10px;"
+            "background:#FFFFFF;color:#455761;}"
+            "QPushButton:hover{background:#F2F6F8;border-color:#B7C8D2;}"
+        )
+
     def _install_task_surface(self, table):
-        """Apply premium V8 hierarchy while retaining the original table API."""
         self._apply_table_style(table)
 
         if not getattr(self.window, "_v8_refresh_tasks_wrapped", False):
@@ -132,8 +140,6 @@ class V8DetailPanel(QObject):
                 self.window._v8_refresh_tasks_wrapped = True
 
         self.apply_task_row_hierarchy()
-        # style_v8 applies its shell stylesheet after this controller is
-        # installed. Reassert the task-surface styling on the next event turn.
         QTimer.singleShot(0, lambda: self._apply_table_style(table))
 
     @staticmethod
@@ -166,24 +172,19 @@ class V8DetailPanel(QObject):
                 title_item.setFont(font)
                 title_item.setForeground(QColor("#172B3A"))
                 title_item.setData(Qt.UserRole + 1, "v8TaskTitle")
-
             theme_item = table.item(row, 2)
             if theme_item is not None:
                 theme_item.setData(Qt.UserRole + 1, "v8TaskMeta")
-
             due_item = table.item(row, 4)
             if due_item is not None:
                 due_item.setData(Qt.UserRole + 1, "v8TaskDue")
                 due_item.setForeground(QColor("#C23B3B") if "Heute" in due_item.text() else QColor("#53656F"))
-
             status_item = table.item(row, 5)
             if status_item is not None:
                 status_item.setData(Qt.UserRole + 1, "v8TaskStatus")
-
             priority_item = table.item(row, 3)
             if priority_item is not None:
                 priority_item.setData(Qt.UserRole + 1, "v8TaskPriority")
-
             check_item = table.item(row, 0)
             if check_item is not None:
                 check_item.setData(Qt.UserRole + 1, "v8TaskRow")
