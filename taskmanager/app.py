@@ -35,6 +35,11 @@ def _install_v8_secondary_actions(window):
     window._v8_secondary_installed = True
 
 
+def _install_v7_secondary_actions(window):
+    """Compatibility wrapper retained while V8 owns the visible navigation."""
+    return _install_v8_secondary_actions(window)
+
+
 def main():
     init_db()
     if DB_PATH.exists() and DB_PATH.stat().st_size > 0:
@@ -56,6 +61,7 @@ def main():
     configure_responsive_task_area(w)
     configure_editor_subtask_controls(w)
     apply_workspace_interaction_fixes(w)
+    _install_v7_secondary_actions(w)
     _install_v8_secondary_actions(w)
     install_v8_responsive_behavior(w)
 
