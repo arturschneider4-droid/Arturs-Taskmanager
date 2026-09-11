@@ -33,25 +33,24 @@ class V8Kanban:
         self.lanes = getattr(self.window, "kcols", self.lanes)
         for status, accent in STATUS_LANES:
             lane = self.lanes.get(status)
-            if lane is None:
-                continue
-            self._style_lane(lane, accent)
+            if lane is not None:
+                self._style_lane(lane, accent)
 
     @staticmethod
     def _style_lane(lane, accent):
         lane.setObjectName("v8KanbanLane")
         lane.setSpacing(8)
-        lane.setContentsMargins(6, 6, 6, 6)
+        lane.setContentsMargins(7, 7, 7, 7)
         lane.setSelectionMode(lane.SelectionMode.SingleSelection)
         lane.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         lane.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         lane.setStyleSheet(
             "QListWidget#v8KanbanLane{background:#FFFFFF;border:1px solid #DCE4E9;"
-            "border-radius:7px;padding:6px;}"
-            "QListWidget#v8KanbanLane::item{background:#F8FAFB;border:1px solid #E3E9ED;"
-            "border-radius:6px;padding:9px 10px;margin:2px 0;color:#263844;}"
-            "QListWidget#v8KanbanLane::item:hover{background:#F1F5F7;border-color:#C8D6DE;}"
-            "QListWidget#v8KanbanLane::item:selected{background:#E7F1FA;border-color:#B8D2E3;color:#172B3A;}"
+            f"border-top:3px solid {accent};border-radius:8px;padding:5px;}"
+            "QListWidget#v8KanbanLane::item{background:#FFFFFF;border:1px solid #E1E8EC;"
+            "border-radius:7px;padding:10px 11px;margin:1px 0;color:#263844;}"
+            "QListWidget#v8KanbanLane::item:hover{background:#F8FAFB;border-color:#C8D6DE;}"
+            "QListWidget#v8KanbanLane::item:selected{background:#EAF3F9;border-color:#8FB9D0;color:#172B3A;}"
         )
         for row in range(lane.count()):
             item = lane.item(row)
@@ -61,7 +60,6 @@ class V8Kanban:
             item.setFont(font)
             item.setForeground(QColor("#263844"))
             item.setToolTip(item.text().replace("\n", " · "))
-        lane.setProperty("v8LaneAccent", accent)
         lane.style().unpolish(lane)
         lane.style().polish(lane)
         lane.update()
