@@ -162,7 +162,8 @@ def _install_task_surface(window, workspace_layout):
     editor = getattr(window, "editor", None)
     if editor is not None:
         editor.setObjectName("v8Inspector"); editor.setMinimumWidth(320); editor.setMaximumWidth(650); editor.setVisible(False)
-    install_v8_detail_panel(window)
+    panel = install_v8_detail_panel(window)
+    panel.set_panel_open(True)
 
 
 def _install_title_and_toolbar(window, layout):
