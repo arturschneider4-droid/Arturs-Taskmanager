@@ -15,7 +15,12 @@ def test_v8_eisenhower_presentation_contract_exists():
 
 def test_v8_eisenhower_preserves_existing_priority_categories():
     text = Path("taskmanager/v8_eisenhower.py").read_text(encoding="utf-8")
-    for priority in ("Hoch", "Mittel", "Niedrig"):
+    for priority in (
+        "important_urgent",
+        "important_not_urgent",
+        "not_important_urgent",
+        "not_important_not_urgent",
+    ):
         assert priority in text
 
 
