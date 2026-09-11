@@ -1,12 +1,12 @@
 """V8 premium Planning presentation layer; existing planning data remains source_of_truth.
 
 The module only styles and lays out the existing QListWidget lanes. It deliberately
-contains no task loading or refresh_plan logic. The three existing planning groups
-are preserved and the layout is responsive to the available workspace width.
+contains no task-loading implementation. The three existing planning groups are
+preserved and the layout is responsive to the available workspace width.
 """
 
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QFrame, QLabel, QHBoxLayout, QListWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame
 
 
 PLANNING_LANES = (
