@@ -1,5 +1,5 @@
 import sys
-from PySide6.QtWidgets import QApplication, QMessageBox, QPushButton
+from PySide6.QtWidgets import QApplication, QMessageBox, QPushButton, QHeaderView
 from .db import init_db, DB_PATH, backup_db
 from .ui import MainWindow, STYLE
 from .priority_sync import apply_priority_sync
@@ -15,6 +15,11 @@ from .style_v8 import V8_STYLE, rebuild_v8_shell, install_v8_responsive_behavior
 VERSION = "8.0"
 # Historical compatibility marker: the V7 release used VERSION = "7.1".
 V7_COMPATIBILITY_VERSION = "7.1"
+
+# PySide6 exposes resize modes through QHeaderView.ResizeMode.  Keep the
+# legacy shorthand used by the V7 presentation layer working as well.
+if not hasattr(QHeaderView, "Fixed"):
+    QHeaderView.Fixed = QHeaderView.ResizeMode.Fixed
 
 
 def _install_v8_secondary_actions(window):
