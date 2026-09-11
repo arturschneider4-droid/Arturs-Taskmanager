@@ -15,10 +15,11 @@ def test_v8_task_surface_has_premium_row_hierarchy():
 
 
 def test_v8_task_surface_keeps_functional_table_as_source_of_truth():
-    text = Path("taskmanager/v8_detail_panel.py").read_text(encoding="utf-8")
-    assert "getattr(window, \"table\", None)" in text
-    assert "setHorizontalScrollBarPolicy" in text
-    assert "setSectionResizeMode" in text
+    detail = Path("taskmanager/v8_detail_panel.py").read_text(encoding="utf-8")
+    style = Path("taskmanager/style_v8.py").read_text(encoding="utf-8")
+    assert 'getattr(window, "table", None)' in detail
+    assert "setHorizontalScrollBarPolicy" in detail
+    assert "setSectionResizeMode" in style
 
 
 def test_v8_compact_mode_is_explicitly_styled():
