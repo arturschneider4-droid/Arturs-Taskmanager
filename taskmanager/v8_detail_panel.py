@@ -1,11 +1,11 @@
-"""V8 task inspector state controller.
+"""V8 task inspector and premium task-surface presentation controller.
 
-The existing V7 editor remains the functional source of truth. This small
-controller gives the V8 presentation a stable inspector contract without
-moving or duplicating task-editing widgets.
+The existing V7 editor and task refresh logic remain the functional source of
+truth. V8 only adds presentation semantics around that existing hierarchy.
 """
 
-from PySide6.QtCore import QObject, QEvent
+from PySide6.QtCore import QObject, QEvent, Qt
+from PySide6.QtGui import QColor, QFont
 
 
 class V8DetailPanel(QObject):
@@ -15,6 +15,16 @@ class V8DetailPanel(QObject):
     MAX_WIDTH = 650
     DEFAULT_WIDTH = 380
     NARROW_BREAKPOINT = 960
+
+    # Semantic row roles used by the V8 premium task surface.
+    V8_TASK_ROLES = (
+        "v8TaskRow",
+        "v8TaskTitle",
+        "v8TaskMeta",
+        "v8TaskStatus",
+        "v8TaskPriority",
+        "v8TaskDue",
+    )
 
     def __init__(self, window):
         super().__init__(window)
@@ -31,6 +41,7 @@ class V8DetailPanel(QObject):
         table = getattr(window, "table", None)
         if table is not None:
             table.itemSelectionChanged.connect(self.sync_from_selection)
+            self._install_task_surface(table)
 
     @property
     def task_id(self):
@@ -105,6 +116,70 @@ class V8DetailPanel(QObject):
             self.splitter.setSizes([max(450, total - self._panel_width), self._panel_width])
         else:
             self.splitter.setSizes([max(450, total), 0])
+
+    def _install_task_surface(self, table):
+        """Apply premium V8 hierarchy while retaining the original table API."""
+        table.setObjectName("v8TaskRows")
+        table.setAlternatingRowColors(False)
+        table.setShowGrid(False)
+        table.setWordWrap(False)
+        table.setTextElideMode(Qt.ElideRight)
+        table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        table.setStyleSheet(
+            "QTableWidget#v8TaskRows{background:#FFFFFF;border:0;}"
+            "QTableWidget#v8TaskRows::item{padding:7px 8px;border-bottom:1px solid #EEF2F4;}"
+            "QTableWidget#v8TaskRows::item:selected{background:#E7F1FA;color:#172B3A;}"
+            "QHeaderView::section{background:#FFFFFF;border:0;border-bottom:1px solid #DCE4E9;"
+            "padding:8px;color:#74838C;font-size:8pt;font-weight:700;}"
+        )
+
+        if not getattr(self.window, "_v8_refresh_tasks_wrapped", False):
+            refresh_tasks = getattr(self.window, "refresh_tasks", None)
+            if callable(refresh_tasks):
+                def refresh_tasks_v8(*args, **kwargs):
+                    result = refresh_tasks(*args, **kwargs)
+                    self.apply_task_row_hierarchy()
+                    return result
+                self.window.refresh_tasks = refresh_tasks_v8
+                self.window._v8_refresh_tasks_wrapped = True
+
+        self.apply_task_row_hierarchy()
+
+    def apply_task_row_hierarchy(self):
+        """Style existing task items after every functional table refresh."""
+        table = getattr(self.window, "table", None)
+        if table is None:
+            return
+        for row in range(table.rowCount()):
+            title_item = table.item(row, 1)
+            if title_item is not None:
+                font = QFont(title_item.font())
+                font.setBold(True)
+                font.setPointSize(max(9, font.pointSize()))
+                title_item.setFont(font)
+                title_item.setForeground(QColor("#172B3A"))
+                title_item.setData(Qt.UserRole + 1, "v8TaskTitle")
+
+            theme_item = table.item(row, 2)
+            if theme_item is not None:
+                theme_item.setData(Qt.UserRole + 1, "v8TaskMeta")
+
+            due_item = table.item(row, 4)
+            if due_item is not None:
+                due_item.setData(Qt.UserRole + 1, "v8TaskDue")
+                due_item.setForeground(QColor("#C23B3B") if "Heute" in due_item.text() else QColor("#53656F"))
+
+            status_item = table.item(row, 5)
+            if status_item is not None:
+                status_item.setData(Qt.UserRole + 1, "v8TaskStatus")
+
+            priority_item = table.item(row, 3)
+            if priority_item is not None:
+                priority_item.setData(Qt.UserRole + 1, "v8TaskPriority")
+
+            check_item = table.item(row, 0)
+            if check_item is not None:
+                check_item.setData(Qt.UserRole + 1, "v8TaskRow")
 
 
 def install_v8_detail_panel(window):
