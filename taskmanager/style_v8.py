@@ -3,7 +3,7 @@
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton,
-    QVBoxLayout, QWidget, QToolButton, QMenu,
+    QVBoxLayout, QWidget, QToolButton, QMenu, QHeaderView,
 )
 
 from .constants import PRIORITY_LIGHTS
@@ -33,6 +33,7 @@ QPushButton#v8Tool { background: #FFFFFF; border: 1px solid #D4DEE4; border-radi
 QPushButton#v8Tool:hover { background: #F2F6F8; border-color: #B7C8D2; }
 QPushButton#v8Primary { background: #0050A4; color: #FFFFFF; border: 0; border-radius: 6px; padding: 8px 14px; font-weight: 700; }
 QPushButton#v8Primary:hover { background: #0068C9; }
+QPushButton#v8Primary:pressed { background: #00458F; }
 #v8TaskSurface { background: #FFFFFF; border: 1px solid #DCE4E9; border-radius: 6px; }
 #v8Inspector { background: #FFFFFF; border-left: 1px solid #D9E2E8; }
 #v8Divider { background: #E4EAEE; min-height: 1px; max-height: 1px; }
@@ -157,8 +158,8 @@ def _install_task_surface(window, workspace_layout):
     table = getattr(window, "table", None)
     if table is not None:
         table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff); table.setWordWrap(False); table.verticalHeader().setDefaultSectionSize(42); table.setTextElideMode(Qt.ElideRight)
-        header = table.horizontalHeader(); header.setStretchLastSection(False); header.setSectionResizeMode(0, header.Fixed); header.setSectionResizeMode(1, header.Stretch)
-        for col, width in {2:118,3:88,4:96,5:84,6:34}.items(): header.setSectionResizeMode(col, header.Fixed); table.setColumnWidth(col, width)
+        header = table.horizontalHeader(); header.setStretchLastSection(False); header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed); header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        for col, width in {2:118,3:88,4:96,5:84,6:34}.items(): header.setSectionResizeMode(col, QHeaderView.ResizeMode.Fixed); table.setColumnWidth(col, width)
     editor = getattr(window, "editor", None)
     if editor is not None:
         editor.setObjectName("v8Inspector"); editor.setMinimumWidth(320); editor.setMaximumWidth(650); editor.setVisible(False)
