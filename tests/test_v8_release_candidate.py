@@ -32,3 +32,8 @@ def test_v8_release_candidate_keeps_version_8_startup():
     assert 'VERSION = "8.0"' in text
     assert "rebuild_professional_shell" in text
     assert "rebuild_v8_shell" in text
+
+
+def test_v8_windows_packaging_collects_taskmanager_submodules():
+    text = Path(".github/workflows/build-windows.yml").read_text(encoding="utf-8")
+    assert "--collect-submodules taskmanager" in text
