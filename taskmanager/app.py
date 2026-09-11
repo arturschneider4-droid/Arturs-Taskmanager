@@ -53,8 +53,16 @@ def main():
     install_overview_navigation(w)
     apply_v63_visuals(w)
     apply_v64_visuals(w)
+
+    # Initialize the complete V7 shell first. V8 replaces its presentation
+    # shell afterwards, but keeps the initialized functional widgets and
+    # lifetime references so V7 startup utilities remain intact.
+    rebuild_professional_shell(w)
     legacy_shell = w.centralWidget()
     w._v7_legacy_shell = legacy_shell
+    if hasattr(w, "version_label"):
+        w.version_label.setText(f"V{VERSION}")
+
     rebuild_v8_shell(w)
     w._v8_legacy_shell = legacy_shell
     configure_responsive_task_area(w)
