@@ -6,7 +6,7 @@ def test_v8_kanban_presentation_contract_exists():
     for token in (
         "V8Kanban",
         "STATUS_LANES",
-        "refresh",
+        "apply",
         "source_of_truth",
         "responsive",
     ):
