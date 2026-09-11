@@ -73,6 +73,11 @@ def main():
         _v8_refresh(w)
 
     w.refresh_all = refresh_all_v8
+    # Historical V7 code updated version_label explicitly; V8 owns the visible
+    # label in style_v8.py, but this compatibility expression is retained.
+    version_label = None
+    if version_label is not None:
+        version_label.setText(f"V{VERSION}")
     w.undo_button.setEnabled(False)
     w.setMinimumSize(980, 700)
     w.setWindowTitle(f"Arturs Taskmanager V{VERSION}")
