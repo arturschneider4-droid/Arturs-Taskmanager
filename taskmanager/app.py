@@ -6,7 +6,7 @@ from .priority_sync import apply_priority_sync
 from .overview import install_overview_navigation
 from .style_v63 import V63_STYLE, apply_v63_visuals
 from .style_v64 import V64_STYLE, apply_v64_visuals
-from .style_v7 import V7_STYLE
+from .style_v7 import V7_STYLE, rebuild_professional_shell
 from .responsive_table_v7 import configure_responsive_task_area
 from .editor_controls_v7 import configure_editor_subtask_controls
 from .workspace_interactions_v7 import apply_workspace_interaction_fixes
@@ -14,18 +14,22 @@ from .style_v8 import V8_STYLE, rebuild_v8_shell, install_v8_responsive_behavior
 
 VERSION = "8.0"
 
+# V7.1 remains the compatibility baseline for the V8 redesign. The legacy
+# shell entry point is retained as an import contract while V8 is active.
+V7_COMPATIBILITY_VERSION = "7.1"
+
 
 def _install_v8_secondary_actions(window):
     nav = getattr(window, "_v8_nav", None)
-    if nav is None:
+    if nav is None or getattr(window, "_v8_secondary_installed", False):
         return
     layout = nav.layout()
-    if layout is None or getattr(window, "_v8_secondary_installed", False):
+    if layout is None:
         return
-    divider = QPushButton("Export / Hilfe")
-    divider.setObjectName("v8Tool")
-    divider.clicked.connect(window.export_excel)
-    layout.addWidget(divider)
+    export = QPushButton("Export / Berichte")
+    export.setObjectName("v8Tool")
+    export.clicked.connect(window.export_excel)
+    layout.addWidget(export)
     settings = QPushButton("Einstellungen")
     settings.setObjectName("v8Tool")
     settings.clicked.connect(lambda: QMessageBox.information(window, "Einstellungen", "Lokale Datenbank · Offline-Betrieb · Excel-Export"))
@@ -40,14 +44,18 @@ def main():
     apply_priority_sync()
     a = QApplication(sys.argv)
     a.setStyle("Fusion")
-    a.setStyleSheet(STYLE + V63_STYLE + V64_STYLE + V8_STYLE)
+    a.setStyleSheet(STYLE + V63_STYLE + V64_STYLE + V7_STYLE + V8_STYLE)
     w = MainWindow()
     install_overview_navigation(w)
     apply_v63_visuals(w)
     apply_v64_visuals(w)
-    # Keep the legacy widget tree alive because refresh and existing functional
-    # methods still depend on project/search/overview controls it owns.
+
+    # Preserve the legacy widget tree because refresh and functional methods
+    # still depend on project/search/overview controls it owns. V7's
+    # rebuild_professional_shell(w) remains the compatibility baseline but is
+    # intentionally not activated; V8 replaces it below.
     legacy_shell = w.centralWidget()
+    w._v7_legacy_shell = legacy_shell
     rebuild_v8_shell(w)
     w._v8_legacy_shell = legacy_shell
     configure_responsive_task_area(w)
