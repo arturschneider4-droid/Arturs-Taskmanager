@@ -38,7 +38,7 @@ jobs:
       - name: Build EXE
         shell: pwsh
         run: |
-          pyinstaller --noconfirm --clean --windowed --name ArtursTaskmanager --hidden-import taskmanager.v8_kanban --hidden-import taskmanager.v8_eisenhower --hidden-import taskmanager.v8_planning main.py
+          pyinstaller --noconfirm --clean --windowed --name ArtursTaskmanager --collect-submodules taskmanager main.py
 
       - name: Create ZIP
         shell: pwsh
