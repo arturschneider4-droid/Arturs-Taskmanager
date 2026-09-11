@@ -13,11 +13,8 @@ from .workspace_interactions_v7 import apply_workspace_interaction_fixes
 from .style_v8 import V8_STYLE, rebuild_v8_shell, install_v8_responsive_behavior
 
 VERSION = "8.0"
-# Historical compatibility marker: the V7 release used VERSION = "7.1".
 V7_COMPATIBILITY_VERSION = "7.1"
 
-# PySide6 exposes resize modes through QHeaderView.ResizeMode.  Keep the
-# legacy shorthand used by the V7 presentation layer working as well.
 if not hasattr(QHeaderView, "Fixed"):
     QHeaderView.Fixed = QHeaderView.ResizeMode.Fixed
 
@@ -41,7 +38,6 @@ def _install_v8_secondary_actions(window):
 
 
 def _install_v7_secondary_actions(window):
-    """Compatibility wrapper retained while V8 owns the visible navigation."""
     return _install_v8_secondary_actions(window)
 
 
@@ -59,8 +55,6 @@ def main():
     apply_v64_visuals(w)
     legacy_shell = w.centralWidget()
     w._v7_legacy_shell = legacy_shell
-    # Compatibility baseline: rebuild_professional_shell(w) remains imported,
-    # while the approved V8 shell is the active presentation.
     rebuild_v8_shell(w)
     w._v8_legacy_shell = legacy_shell
     configure_responsive_task_area(w)
@@ -78,11 +72,6 @@ def main():
         _v8_refresh(w)
 
     w.refresh_all = refresh_all_v8
-    # Historical V7 code updated version_label explicitly; V8 owns the visible
-    # label in style_v8.py, but this compatibility expression is retained.
-    version_label = None
-    if version_label is not None:
-        version_label.setText(f"V{VERSION}")
     w.undo_button.setEnabled(False)
     w.setMinimumSize(980, 700)
     w.setWindowTitle(f"Arturs Taskmanager V{VERSION}")
