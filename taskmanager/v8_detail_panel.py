@@ -4,7 +4,7 @@ The existing V7 editor and task refresh logic remain the functional source of
 truth. V8 only adds presentation semantics around that existing hierarchy.
 """
 
-from PySide6.QtCore import QObject, QEvent, Qt
+from PySide6.QtCore import QObject, QEvent, Qt, QTimer
 from PySide6.QtGui import QColor, QFont
 
 
@@ -119,6 +119,25 @@ class V8DetailPanel(QObject):
 
     def _install_task_surface(self, table):
         """Apply premium V8 hierarchy while retaining the original table API."""
+        self._apply_table_style(table)
+
+        if not getattr(self.window, "_v8_refresh_tasks_wrapped", False):
+            refresh_tasks = getattr(self.window, "refresh_tasks", None)
+            if callable(refresh_tasks):
+                def refresh_tasks_v8(*args, **kwargs):
+                    result = refresh_tasks(*args, **kwargs)
+                    self.apply_task_row_hierarchy()
+                    return result
+                self.window.refresh_tasks = refresh_tasks_v8
+                self.window._v8_refresh_tasks_wrapped = True
+
+        self.apply_task_row_hierarchy()
+        # style_v8 applies its shell stylesheet after this controller is
+        # installed. Reassert the task-surface styling on the next event turn.
+        QTimer.singleShot(0, lambda: self._apply_table_style(table))
+
+    @staticmethod
+    def _apply_table_style(table):
         table.setObjectName("v8TaskRows")
         table.setAlternatingRowColors(False)
         table.setShowGrid(False)
@@ -132,18 +151,6 @@ class V8DetailPanel(QObject):
             "QHeaderView::section{background:#FFFFFF;border:0;border-bottom:1px solid #DCE4E9;"
             "padding:8px;color:#74838C;font-size:8pt;font-weight:700;}"
         )
-
-        if not getattr(self.window, "_v8_refresh_tasks_wrapped", False):
-            refresh_tasks = getattr(self.window, "refresh_tasks", None)
-            if callable(refresh_tasks):
-                def refresh_tasks_v8(*args, **kwargs):
-                    result = refresh_tasks(*args, **kwargs)
-                    self.apply_task_row_hierarchy()
-                    return result
-                self.window.refresh_tasks = refresh_tasks_v8
-                self.window._v8_refresh_tasks_wrapped = True
-
-        self.apply_task_row_hierarchy()
 
     def apply_task_row_hierarchy(self):
         """Style existing task items after every functional table refresh."""
