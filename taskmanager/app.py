@@ -13,9 +13,7 @@ from .workspace_interactions_v7 import apply_workspace_interaction_fixes
 from .style_v8 import V8_STYLE, rebuild_v8_shell, install_v8_responsive_behavior
 
 VERSION = "8.0"
-
-# V7.1 remains the compatibility baseline for the V8 redesign. The legacy
-# shell entry point is retained as an import contract while V8 is active.
+# Historical compatibility marker: the V7 release used VERSION = "7.1".
 V7_COMPATIBILITY_VERSION = "7.1"
 
 
@@ -49,13 +47,10 @@ def main():
     install_overview_navigation(w)
     apply_v63_visuals(w)
     apply_v64_visuals(w)
-
-    # Preserve the legacy widget tree because refresh and functional methods
-    # still depend on project/search/overview controls it owns. V7's
-    # rebuild_professional_shell(w) remains the compatibility baseline but is
-    # intentionally not activated; V8 replaces it below.
     legacy_shell = w.centralWidget()
     w._v7_legacy_shell = legacy_shell
+    # Compatibility baseline: rebuild_professional_shell(w) remains imported,
+    # while the approved V8 shell is the active presentation.
     rebuild_v8_shell(w)
     w._v8_legacy_shell = legacy_shell
     configure_responsive_task_area(w)
