@@ -1,7 +1,8 @@
 """V8 premium Kanban presentation layer.
 
 The existing Kanban widgets and task business logic remain the source of truth.
-This module only styles and refreshes the already-created status lanes.
+This module only styles and refreshes the already-created status lanes. Its
+responsive presentation is intentionally based on the existing Qt layout.
 """
 
 from PySide6.QtCore import Qt, QTimer
