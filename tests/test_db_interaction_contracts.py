@@ -23,9 +23,10 @@ def test_due_filters_keep_later_and_unassigned_distinct(monkeypatch, tmp_path):
     db.init_db()
 
     today = date.today()
+    week_end = today + timedelta(days=6 - today.weekday())
     no_due = db.save(_task("Ohne Datum"), make_backup=False)
-    later = db.save(_task("Später", (today + timedelta(days=14)).isoformat()), make_backup=False)
-    this_week = db.save(_task("Diese Woche", (today + timedelta(days=2)).isoformat()), make_backup=False)
+    later = db.save(_task("Später", (week_end + timedelta(days=1)).isoformat()), make_backup=False)
+    this_week = db.save(_task("Diese Woche", week_end.isoformat()), make_backup=False)
 
     assert {r["id"] for r in db.tasks(due="Ohne Fälligkeit")} == {no_due}
     assert {r["id"] for r in db.tasks(due="Später")} == {later}
