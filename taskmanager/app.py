@@ -1,6 +1,6 @@
 import sys
 from PySide6.QtWidgets import QApplication, QMessageBox, QPushButton, QHeaderView
-from .db import init_db, DB_PATH, backup_db
+from .db import init_db, DB_PATH, backup_db, latest_backup
 from .ui import MainWindow, STYLE
 from .priority_sync import apply_priority_sync
 from .overview import install_overview_navigation
