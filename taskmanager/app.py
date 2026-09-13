@@ -10,6 +10,7 @@ from .style_v7 import V7_STYLE, rebuild_professional_shell
 from .responsive_table_v7 import configure_responsive_task_area
 from .editor_controls_v7 import configure_editor_subtask_controls
 from .workspace_interactions_v7 import apply_workspace_interaction_fixes
+from .v8_interactions import install_drop_guard
 from .style_v8 import V8_STYLE, rebuild_v8_shell, install_v8_responsive_behavior
 
 VERSION = "8.0"
@@ -68,6 +69,7 @@ def main():
     configure_responsive_task_area(w)
     configure_editor_subtask_controls(w)
     apply_workspace_interaction_fixes(w)
+    install_drop_guard(w)
     _install_v7_secondary_actions(w)
     _install_v8_secondary_actions(w)
     install_v8_responsive_behavior(w)
