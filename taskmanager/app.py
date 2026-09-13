@@ -80,7 +80,7 @@ def main():
         _v8_refresh(w)
 
     w.refresh_all = refresh_all_v8
-    w.undo_button.setEnabled(False)
+    w.undo_button.setEnabled(bool(latest_backup()))
     w.setMinimumSize(980, 700)
     w.setWindowTitle(f"Arturs Taskmanager V{VERSION}")
     w.show()
