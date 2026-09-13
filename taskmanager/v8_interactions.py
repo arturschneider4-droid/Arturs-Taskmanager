@@ -1,5 +1,7 @@
 from datetime import date, timedelta
 
+from PySide6.QtWidgets import QListWidget
+
 from .constants import PRIORITIES
 
 
@@ -53,3 +55,27 @@ def next_planning_due(target, today=None):
     if target == "Später":
         return (week_end + timedelta(days=1)).isoformat()
     raise ValueError(f"Unknown planning target: {target}")
+
+
+def drop_event_was_accepted(event):
+    """Return whether Qt accepted the drop, without relying on target mode."""
+    checker = getattr(event, "isAccepted", None)
+    return bool(checker()) if callable(checker) else False
+
+
+def install_drop_guard(_window=None):
+    """Make DropList emit its persistence signal only for accepted drops."""
+    from .ui import DropList
+
+    if getattr(DropList, "_v8_drop_guard_installed", False):
+        return
+
+    def guarded_drop_event(self, event):
+        drag_id = self.drag_id
+        QListWidget.dropEvent(self, event)
+        if drag_id is not None and drop_event_was_accepted(event):
+            self.moved.emit(drag_id, self.mode)
+        self.drag_id = None
+
+    DropList.dropEvent = guarded_drop_event
+    DropList._v8_drop_guard_installed = True
