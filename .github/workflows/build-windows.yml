@@ -40,13 +40,18 @@ jobs:
         run: |
           pyinstaller --noconfirm --clean --windowed --name ArtursTaskmanager --collect-submodules taskmanager --hidden-import taskmanager.v8_kanban --hidden-import taskmanager.v8_eisenhower --hidden-import taskmanager.v8_planning main.py
 
-      - name: Verify V8 modules in PyInstaller analysis
+      - name: Verify V8 release output
         shell: pwsh
         run: |
-          $warn = Get-Content build/ArtursTaskmanager/warn-ArtursTaskmanager.txt -Raw
-          if ($warn -match 'taskmanager\.v8_kanban') { throw 'PyInstaller warning contains taskmanager.v8_kanban' }
-          if ($warn -match 'taskmanager\.v8_eisenhower') { throw 'PyInstaller warning contains taskmanager.v8_eisenhower' }
-          if ($warn -match 'taskmanager\.v8_planning') { throw 'PyInstaller warning contains taskmanager.v8_planning' }
+          if (-not (Test-Path dist/ArtursTaskmanager/ArtursTaskmanager.exe)) {
+            throw 'PyInstaller did not produce the expected ArtursTaskmanager.exe'
+          }
+          $xref = Get-Content build/ArtursTaskmanager/xref-ArtursTaskmanager.html -Raw
+          foreach ($module in @('taskmanager.v8_kanban', 'taskmanager.v8_eisenhower', 'taskmanager.v8_planning')) {
+            if ($xref -notmatch [regex]::Escape($module)) {
+              throw "PyInstaller cross-reference does not contain $module"
+            }
+          }
 
       - name: Create ZIP
         shell: pwsh
