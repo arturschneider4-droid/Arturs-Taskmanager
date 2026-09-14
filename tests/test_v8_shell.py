@@ -29,3 +29,35 @@ def test_app_wires_v8_shell():
     assert "style_v8" in text
     assert "rebuild_v8_shell" in text
     assert 'VERSION = "8.0"' in text
+
+
+def test_v8_theme_navigation_items_are_actionable():
+    text = Path("taskmanager/style_v8.py").read_text(encoding="utf-8")
+    assert "themes.itemClicked.connect" in text
+    assert "window.set_project" in text
+    assert "window.set_view(\"tasks\")" in text
+
+
+def test_v8_group_button_changes_visible_task_order():
+    text = Path("taskmanager/style_v8.py").read_text(encoding="utf-8")
+    assert "def _apply_v8_grouping" in text
+    assert "sortItems" in text
+    assert "_apply_v8_grouping(window)" in text
+
+
+def test_v8_secondary_and_toolbar_buttons_have_handlers():
+    text = Path("taskmanager/style_v8.py").read_text(encoding="utf-8")
+    app = Path("taskmanager/app.py").read_text(encoding="utf-8")
+    for token in (
+        'detail.clicked.connect',
+        'primary.clicked.connect(window.new_task)',
+        'filter_b.clicked.connect',
+        'sort_b.clicked.connect(window.cycle_sort)',
+        'group_b.clicked.connect',
+        'compact.clicked.connect',
+        'collapse.clicked.connect',
+        'add_theme.clicked.connect(window.new_project)',
+    ):
+        assert token in text, token
+    assert 'export.clicked.connect(window.export_excel)' in app
+    assert 'settings.clicked.connect' in app
