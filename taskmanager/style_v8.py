@@ -3,7 +3,7 @@
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton,
-    QVBoxLayout, QWidget, QToolButton, QMenu, QHeaderView,
+    QVBoxLayout, QWidget, QToolButton, QMenu, QHeaderView, QAbstractItemView,
 )
 
 from .constants import PRIORITY_LIGHTS
@@ -130,18 +130,10 @@ def _set_group(window, group):
 
 
 def _apply_v8_grouping(window):
-    """Apply the selected grouping as a deterministic table ordering."""
     table = getattr(window, "table", None)
-    if table is None:
-        return
-    column = {
-        "Themengebiet": 2,
-        "Priorität": 3,
-        "Fälligkeit": 4,
-        "Status": 5,
-    }.get(getattr(window, "_v8_group", "Keine Gruppierung"))
-    if column is not None:
-        table.sortItems(column, Qt.AscendingOrder)
+    if table is None: return
+    column = {"Themengebiet": 2, "Priorität": 3, "Fälligkeit": 4, "Status": 5}.get(getattr(window, "_v8_group", "Keine Gruppierung"))
+    if column is not None: table.sortItems(column, Qt.AscendingOrder)
 
 
 def _toggle_compact(window):
@@ -160,19 +152,32 @@ def _build_navigation(window, root_layout):
     for icon, text, key in _VIEWS:
         button = _make_nav_button(window, icon, text, key); layout.addWidget(button); window._v8_nav_items.append((key, button))
     div2 = QFrame(); div2.setObjectName("v8Divider"); layout.addWidget(div2); theme_label = QLabel("THEMENGEBIETE"); theme_label.setObjectName("v8NavHeader"); layout.addWidget(theme_label); window._v8_theme_label = theme_label
-    themes = QListWidget(); themes.setObjectName("v8Themes"); themes.setMaximumHeight(210); layout.addWidget(themes,1); window._v8_themes = themes
+    themes = QListWidget(); themes.setObjectName("v8Themes"); themes.setMaximumHeight(210); themes.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection); themes.setFocusPolicy(Qt.StrongFocus); themes.setEnabled(True); themes.setMouseTracking(True); layout.addWidget(themes,1); window._v8_themes = themes
     add_theme = QPushButton("＋  Neues Themengebiet"); add_theme.setObjectName("v8Tool"); add_theme.clicked.connect(window.new_project); layout.addWidget(add_theme); window._v8_theme_add = add_theme
     footer = QLabel("Lokal · Offline"); footer.setObjectName("v8NavFooter"); layout.addWidget(footer); window._v8_nav = nav; root_layout.addWidget(nav)
+    def select_theme(item):
+        if item is None: return
+        pid = item.data(Qt.UserRole)
+        if pid is None: return
+        window.set_project(pid)
+        window.set_view("tasks")
+        _sync_active_nav(window, "tasks")
     def refresh_themes():
-        themes.clear(); source = getattr(window, "projects", None)
-        if source is None: return
-        for i in range(source.count()):
-            item = source.item(i); pid = item.data(Qt.UserRole)
-            if pid is not None:
-                visible = QListWidgetItem(item.text().replace("▦  ", "", 1)); visible.setData(Qt.UserRole, pid); themes.addItem(visible)
+        themes.blockSignals(True); themes.clear(); source = getattr(window, "projects", None)
+        if source is not None:
+            selected = None
+            for i in range(source.count()):
+                item = source.item(i); pid = item.data(Qt.UserRole)
+                if pid is not None:
+                    visible = QListWidgetItem(item.text().replace("▦  ", "", 1)); visible.setData(Qt.UserRole, pid); visible.setToolTip(f"Aufgaben in {visible.text()} anzeigen"); themes.addItem(visible)
+                    if pid == getattr(window, "project_filter", None): selected = visible
+            if selected is not None: themes.setCurrentItem(selected)
+        themes.blockSignals(False)
     window._v8_refresh_themes = refresh_themes
     if not getattr(window, "_v8_theme_click_installed", False):
-        themes.itemClicked.connect(lambda item: (window.set_project(item.data(Qt.UserRole)), window.set_view("tasks")))
+        themes.itemClicked.connect(select_theme)
+        themes.itemPressed.connect(select_theme)
+        themes.itemActivated.connect(select_theme)
         window._v8_theme_click_installed = True
 
 
@@ -188,8 +193,7 @@ def _install_task_surface(window, workspace_layout):
     editor = getattr(window, "editor", None)
     if editor is not None:
         editor.setObjectName("v8Inspector"); editor.setMinimumWidth(320); editor.setMaximumWidth(650); editor.setVisible(False)
-    panel = install_v8_detail_panel(window)
-    panel.set_panel_open(True)
+    panel = install_v8_detail_panel(window); panel.set_panel_open(True)
 
 
 def _install_title_and_toolbar(window, layout):
@@ -200,8 +204,7 @@ def _install_title_and_toolbar(window, layout):
 
 def _style_existing_widgets(window):
     table = getattr(window, "table", None)
-    if table is not None:
-        table.setStyleSheet("QTableWidget{background:#FFFFFF;border:0;} QTableWidget::item{padding:6px 7px;border-bottom:1px solid #EEF2F4;} QTableWidget::item:selected{background:#E7F1FA;color:#172B3A;} QHeaderView::section{background:#FFFFFF;border:0;border-bottom:1px solid #DCE4E9;padding:7px;color:#74838C;font-size:8pt;font-weight:700;}")
+    if table is not None: table.setStyleSheet("QTableWidget{background:#FFFFFF;border:0;} QTableWidget::item{padding:6px 7px;border-bottom:1px solid #EEF2F4;} QTableWidget::item:selected{background:#E7F1FA;color:#172B3A;} QHeaderView::section{background:#FFFFFF;border:0;border-bottom:1px solid #DCE4E9;padding:7px;color:#74838C;font-size:8pt;font-weight:700;}")
 
 
 def rebuild_v8_shell(window):
