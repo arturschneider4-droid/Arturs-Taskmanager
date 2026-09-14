@@ -33,9 +33,15 @@ def test_app_wires_v8_shell():
 
 def test_v8_theme_navigation_items_are_actionable():
     text = Path("taskmanager/style_v8.py").read_text(encoding="utf-8")
-    assert "themes.itemClicked.connect" in text
-    assert "window.set_project" in text
-    assert "window.set_view(\"tasks\")" in text
+    for token in (
+        "themes.itemClicked.connect(select_theme)",
+        "themes.itemPressed.connect(select_theme)",
+        "themes.itemActivated.connect(select_theme)",
+        "themes.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)",
+        "window.set_project(pid)",
+        "window.set_view(\"tasks\")",
+    ):
+        assert token in text, token
 
 
 def test_v8_group_button_changes_visible_task_order():
