@@ -46,7 +46,7 @@ class V8Kanban:
         lane.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         lane.setStyleSheet(
             "QListWidget#v8KanbanLane{background:#FFFFFF;border:1px solid #DCE4E9;"
-            f"border-top:3px solid {accent};border-radius:8px;padding:5px;}"
+            f"border-top:3px solid {accent};border-radius:8px;padding:5px;}}"
             "QListWidget#v8KanbanLane::item{background:#FFFFFF;border:1px solid #E1E8EC;"
             "border-radius:7px;padding:10px 11px;margin:1px 0;color:#263844;}"
             "QListWidget#v8KanbanLane::item:hover{background:#F8FAFB;border-color:#C8D6DE;}"
