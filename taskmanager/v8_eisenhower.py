@@ -8,7 +8,7 @@ existing Qt grid layout.
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QFont
-from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QLabel, QAbstractItemView
 
 
 QUADRANTS = (
@@ -60,7 +60,7 @@ class V8Eisenhower:
         lane.setObjectName("v8EisenhowerLane")
         lane.setSpacing(7)
         lane.setContentsMargins(7, 5, 7, 7)
-        lane.setSelectionMode(lane.SelectionMode.SingleSelection)
+        lane.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         lane.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         lane.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         lane.setStyleSheet(
