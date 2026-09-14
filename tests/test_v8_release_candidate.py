@@ -27,6 +27,12 @@ def test_v8_release_candidate_keeps_v8_surface_installation():
         assert token in text
 
 
+def test_v8_refresh_reapplies_all_presentation_layers():
+    text = Path("taskmanager/style_v8.py").read_text(encoding="utf-8")
+    assert 'getattr(window, "_v8_kanban", None)' in text
+    assert 'controller.apply()' in text
+
+
 def test_v8_release_candidate_keeps_version_8_startup():
     text = Path("taskmanager/app.py").read_text(encoding="utf-8")
     assert 'VERSION = "8.0"' in text
