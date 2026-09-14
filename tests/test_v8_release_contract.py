@@ -4,7 +4,7 @@ from taskmanager import app
 def test_v8_release_identity_and_undo_dependency_are_importable():
     assert app.VERSION == "8.0"
     assert callable(app.latest_backup)
-    assert "V8.0" in app.V8_STYLE or "V8" in app.V8_STYLE
+    assert "#v8" in app.V8_STYLE.lower()
 
 
 def test_v8_startup_uses_a_resolved_latest_backup_function():
