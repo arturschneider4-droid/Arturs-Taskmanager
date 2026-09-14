@@ -129,6 +129,21 @@ def _set_group(window, group):
     if hasattr(window, "refresh_all"): window.refresh_all()
 
 
+def _apply_v8_grouping(window):
+    """Apply the selected grouping as a deterministic table ordering."""
+    table = getattr(window, "table", None)
+    if table is None:
+        return
+    column = {
+        "Themengebiet": 2,
+        "Priorität": 3,
+        "Fälligkeit": 4,
+        "Status": 5,
+    }.get(getattr(window, "_v8_group", "Keine Gruppierung"))
+    if column is not None:
+        table.sortItems(column, Qt.AscendingOrder)
+
+
 def _toggle_compact(window):
     window._v8_compact = not getattr(window, "_v8_compact", False)
     table = getattr(window, "table", None)
@@ -156,6 +171,9 @@ def _build_navigation(window, root_layout):
             if pid is not None:
                 visible = QListWidgetItem(item.text().replace("▦  ", "", 1)); visible.setData(Qt.UserRole, pid); themes.addItem(visible)
     window._v8_refresh_themes = refresh_themes
+    if not getattr(window, "_v8_theme_click_installed", False):
+        themes.itemClicked.connect(lambda item: (window.set_project(item.data(Qt.UserRole)), window.set_view("tasks")))
+        window._v8_theme_click_installed = True
 
 
 def _install_task_surface(window, workspace_layout):
@@ -206,6 +224,7 @@ def _v8_refresh(window):
     count = getattr(window,"_v8_count",None); table = getattr(window,"table",None)
     if count is not None and table is not None: count.setText(f"{table.rowCount()} Aufgaben")
     for key, button in getattr(window,"_v8_scopes",[]): _set_property(button,"active","true" if getattr(window,"scope","Alle")==key else "false"); button.setChecked(getattr(window,"scope","Alle")==key)
+    _apply_v8_grouping(window)
     controller = getattr(window, "_v8_kanban", None)
     if controller is not None: controller.apply()
     controller = getattr(window, "_v8_eisenhower", None)
