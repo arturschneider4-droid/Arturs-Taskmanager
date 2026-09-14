@@ -206,6 +206,8 @@ def _v8_refresh(window):
     count = getattr(window,"_v8_count",None); table = getattr(window,"table",None)
     if count is not None and table is not None: count.setText(f"{table.rowCount()} Aufgaben")
     for key, button in getattr(window,"_v8_scopes",[]): _set_property(button,"active","true" if getattr(window,"scope","Alle")==key else "false"); button.setChecked(getattr(window,"scope","Alle")==key)
+    controller = getattr(window, "_v8_kanban", None)
+    if controller is not None: controller.apply()
     controller = getattr(window, "_v8_eisenhower", None)
     if controller is not None: controller.apply()
     controller = getattr(window, "_v8_planning", None)
