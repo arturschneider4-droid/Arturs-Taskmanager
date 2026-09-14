@@ -7,6 +7,7 @@ presentation is intentionally based on the existing Qt layout.
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QFont
+from PySide6.QtWidgets import QAbstractItemView
 
 
 STATUS_LANES = (
@@ -41,7 +42,7 @@ class V8Kanban:
         lane.setObjectName("v8KanbanLane")
         lane.setSpacing(8)
         lane.setContentsMargins(7, 7, 7, 7)
-        lane.setSelectionMode(lane.SelectionMode.SingleSelection)
+        lane.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         lane.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         lane.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         lane.setStyleSheet(
