@@ -53,6 +53,17 @@ jobs:
             }
           }
 
+      - name: Smoke-test Windows EXE startup
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path dist/ArtursTaskmanager/ArtursTaskmanager.exe).Path
+          $process = Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe) -PassThru
+          Start-Sleep -Seconds 12
+          if ($process.HasExited) {
+            throw "ArtursTaskmanager.exe exited during startup with code $($process.ExitCode)"
+          }
+          Stop-Process -Id $process.Id -Force
+
       - name: Create ZIP
         shell: pwsh
         run: |
