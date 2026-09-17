@@ -4,6 +4,7 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QPushButton, QToolButton
 
 import taskmanager.db as db
@@ -18,7 +19,6 @@ def v8_window(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(db, "APP_DIR", tmp_path)
     monkeypatch.setattr(db, "DB_PATH", db_path)
     monkeypatch.setattr(db, "BACKUP_DIR", backup_dir)
-    monkeypatch.setattr(ui, "DB_PATH", db_path)
     db.init_db()
 
     c = db.connect()
@@ -66,7 +66,7 @@ def test_v8_theme_selection_updates_project_and_returns_to_tasks(v8_window):
     window._v8_themes.itemClicked.emit(item)
     QApplication.processEvents()
 
-    assert window.project_filter == item.data(256)
+    assert window.project_filter == item.data(Qt.UserRole)
     assert window.stack.currentWidget() is window.tasks_page
 
 
