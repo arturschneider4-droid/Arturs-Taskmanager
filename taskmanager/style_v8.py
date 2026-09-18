@@ -209,7 +209,21 @@ def _style_existing_widgets(window):
 
 def rebuild_v8_shell(window):
     old = window.centralWidget()
-    if old is not None: old.setParent(None)
+    if old is not None:
+        # MainWindow owns the legacy central widget. Replacing it would delete
+        # all of its child widgets, including the model widgets that V8 reuses.
+        # Detach only the persistent top-level widgets before replacing the
+        # central widget; nested children (e.g. editor controls) stay owned by
+        # their surviving container such as the task stack.
+        persistent = (
+            "global_search", "undo_button", "projects", "project_search",
+            "search", "pfilter", "sfilter", "dfilter", "theme_filter", "stack",
+        )
+        for name in persistent:
+            widget = getattr(window, name, None)
+            if widget is not None and widget.parentWidget() is not None:
+                widget.setParent(None)
+        old.hide()
     root = QWidget(); root.setObjectName("v8Shell"); outer = QVBoxLayout(root); outer.setContentsMargins(0,0,0,0); outer.setSpacing(0)
     top = QFrame(); top.setObjectName("v8Topbar"); top.setFixedHeight(52); tl = QHBoxLayout(top); tl.setContentsMargins(14,7,14,7); brand = QLabel("Arturs Taskmanager"); brand.setObjectName("v8Brand"); tl.addWidget(brand); version = QLabel("V8.0"); version.setObjectName("v8Meta"); tl.addWidget(version); offline = QLabel("● Lokal · Offline"); offline.setObjectName("v8Meta"); tl.addWidget(offline); tl.addStretch()
     search = getattr(window, "global_search", None)
