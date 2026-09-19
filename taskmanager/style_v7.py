@@ -216,6 +216,13 @@ def rebuild_professional_shell(window):
     """Build the V7 shell around existing functional widgets."""
     old = window.centralWidget()
     if old is not None:
+        # The V7 sidebar replaces the legacy project-search surface, but
+        # refresh_projects() still reads this QLineEdit. Keep it as a detached
+        # model widget so the legacy shell can be collected safely (including
+        # in a PyInstaller build, where collection timing differs).
+        project_search = getattr(window, "project_search", None)
+        if project_search is not None:
+            project_search.setParent(None)
         old.setParent(None)
     global_search = window.global_search
     global_search.setObjectName("v7TopSearch")

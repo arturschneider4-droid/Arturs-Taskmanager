@@ -30,6 +30,9 @@ def test_v7_shell_keeps_legacy_refresh_dependencies_alive():
     app, window = _build_v7_window()
     window.refresh_all()
     assert window.projects is not None
+    assert window.project_search.parentWidget() is None
+    window.project_search.setText("nicht vorhanden")
+    window.refresh_projects()
     assert window.stack is not None
     window.close()
 
