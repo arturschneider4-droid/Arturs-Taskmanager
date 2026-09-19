@@ -29,6 +29,7 @@ class V8DetailPanel(QObject):
         self._task_id = getattr(window, "selected_task", None)
         self._panel_width = self.DEFAULT_WIDTH
         self._requested_open = False
+        self._responsive_update = False
 
         if self.editor is not None:
             self.editor.installEventFilter(self)
@@ -45,7 +46,13 @@ class V8DetailPanel(QObject):
 
     @property
     def panel_open(self):
-        return bool(self.editor is not None and self.editor.isVisible())
+        """Return the user's requested panel state.
+
+        Qt's ``isVisible()`` is false while the top-level window is not yet
+        shown and while the responsive layout temporarily hides the editor.
+        Neither case means that the user closed the panel.
+        """
+        return bool(self.editor is not None and self._requested_open)
 
     @property
     def panel_width(self):
@@ -80,18 +87,27 @@ class V8DetailPanel(QObject):
         """Apply the V8 responsive rule without discarding selection state."""
         if self.editor is None:
             return
-        if width < self.NARROW_BREAKPOINT:
-            self.editor.setVisible(False)
-        else:
-            self.editor.setVisible(self._requested_open)
-            if self.editor.isVisible() and self._task_id is not None:
-                select_task = getattr(self.window, "select_task", None)
-                if callable(select_task):
-                    select_task(self._task_id)
+        self._responsive_update = True
+        try:
+            if width < self.NARROW_BREAKPOINT:
+                self.editor.setVisible(False)
+            else:
+                self.editor.setVisible(self._requested_open)
+                if self.editor.isVisible() and self._task_id is not None:
+                    select_task = getattr(self.window, "select_task", None)
+                    if callable(select_task):
+                        select_task(self._task_id)
+        finally:
+            self._responsive_update = False
         self._apply_width()
 
     def eventFilter(self, watched, event):
-        if watched is self.editor and event.type() == QEvent.Hide and self.window.width() >= self.NARROW_BREAKPOINT:
+        if (
+            watched is self.editor
+            and event.type() == QEvent.Hide
+            and not self._responsive_update
+            and self.window.width() >= self.NARROW_BREAKPOINT
+        ):
             self._requested_open = False
         elif watched is self.editor and event.type() == QEvent.Show:
             self._requested_open = True

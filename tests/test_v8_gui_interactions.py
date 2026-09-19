@@ -96,3 +96,23 @@ def test_v8_toolbar_and_responsive_controls_change_state(v8_window):
     assert window._v8_nav.width() == 228
     collapse.click()
     assert window._v8_nav.width() == 60
+
+
+def test_v8_detail_toggle_tracks_requested_state_while_responsive_layout_hides_panel(v8_window):
+    window = v8_window
+    detail = next(
+        button
+        for button in window._v8_workspace.findChildren(QPushButton)
+        if button.text() == "Detail"
+    )
+    panel = window._v8_detail_panel
+
+    panel.handle_window_width(panel.NARROW_BREAKPOINT - 1)
+    assert window.editor.isVisible() is False
+    assert panel.panel_open is True
+
+    detail.click()
+    assert panel.panel_open is False
+
+    detail.click()
+    assert panel.panel_open is True
