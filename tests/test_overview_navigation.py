@@ -12,7 +12,8 @@ def test_overview_scope_maps_each_item_to_filters():
 
 
 def test_overview_counts_categories_are_consistent():
-    # Fixed Wednesday keeps the fixture independent of the day on which CI runs.
+    # Use a fixed Wednesday so the relative test data remains inside the
+    # same calendar week regardless of the day the CI job runs.
     today = date(2026, 9, 2)
     week_end = today + timedelta(days=6 - today.weekday())
     rows = [

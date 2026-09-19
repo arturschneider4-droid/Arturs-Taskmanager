@@ -2,7 +2,7 @@ name: Build Windows
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'feature/v64-premium-enterprise', 'feature/v7-professional-desktop-ui', 'feature/v8-premium-enterprise-ui' ]
   workflow_dispatch:
 
 permissions:
@@ -10,6 +10,7 @@ permissions:
 
 env:
   PYTHONPATH: .
+  QT_QPA_PLATFORM: offscreen
 
 jobs:
   build:
@@ -17,10 +18,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -38,7 +39,31 @@ jobs:
       - name: Build EXE
         shell: pwsh
         run: |
-          pyinstaller --noconfirm --clean --windowed --name ArtursTaskmanager main.py
+          pyinstaller --noconfirm --clean --windowed --name ArtursTaskmanager --collect-submodules taskmanager --hidden-import taskmanager.v8_kanban --hidden-import taskmanager.v8_eisenhower --hidden-import taskmanager.v8_planning main.py
+
+      - name: Verify V8 release output
+        shell: pwsh
+        run: |
+          if (-not (Test-Path dist/ArtursTaskmanager/ArtursTaskmanager.exe)) {
+            throw 'PyInstaller did not produce the expected ArtursTaskmanager.exe'
+          }
+          $xref = Get-Content build/ArtursTaskmanager/xref-ArtursTaskmanager.html -Raw
+          foreach ($module in @('taskmanager.v8_kanban', 'taskmanager.v8_eisenhower', 'taskmanager.v8_planning')) {
+            if ($xref -notmatch [regex]::Escape($module)) {
+              throw "PyInstaller cross-reference does not contain $module"
+            }
+          }
+
+      - name: Smoke-test Windows EXE startup
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path dist/ArtursTaskmanager/ArtursTaskmanager.exe).Path
+          $process = Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe) -PassThru
+          Start-Sleep -Seconds 12
+          if ($process.HasExited) {
+            throw "ArtursTaskmanager.exe exited during startup with code $($process.ExitCode)"
+          }
+          Stop-Process -Id $process.Id -Force
 
       - name: Create ZIP
         shell: pwsh

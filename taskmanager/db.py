@@ -35,7 +35,11 @@ def init_db():
     if "recurrence" not in cols:
         c.execute("ALTER TABLE tasks ADD COLUMN recurrence TEXT NOT NULL DEFAULT 'none'")
     if "updated_at" not in cols:
-        c.execute("ALTER TABLE tasks ADD COLUMN updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP")
+        # SQLite does not permit a non-constant CURRENT_TIMESTAMP default when
+        # adding a column to an existing table. Add it without a default, then
+        # preserve the best timestamp already available for every legacy row.
+        c.execute("ALTER TABLE tasks ADD COLUMN updated_at TEXT")
+        c.execute("UPDATE tasks SET updated_at=COALESCE(created_at, CURRENT_TIMESTAMP)")
     c.commit(); c.close()
 
 
@@ -47,7 +51,6 @@ def backup_db(label="manual"):
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     target = BACKUP_DIR / f"{stamp}_{label}.db"
     shutil.copy2(DB_PATH, target)
-    # Keep the most recent 20 backups.
     files = sorted(BACKUP_DIR.glob("*.db"), key=lambda p: p.stat().st_mtime, reverse=True)
     for old in files[20:]:
         try: old.unlink()
@@ -56,7 +59,6 @@ def backup_db(label="manual"):
 
 
 def restore_backup(path):
-    """Restore a backup atomically enough for a local single-user application."""
     source = Path(path)
     if not source.exists():
         raise FileNotFoundError(source)
@@ -123,7 +125,7 @@ def tasks(project=None,search="",priority=None,status="Alle Status",due="Alle F�
     today=date.today(); end=today+timedelta(days=6-today.weekday())
     if due=="Heute": sql+=" AND t.due_date=?"; a.append(today.isoformat())
     elif due=="Diese Woche": sql+=" AND t.due_date BETWEEN ? AND ?"; a += [today.isoformat(),end.isoformat()]
-    elif due=="Später": sql+=" AND (t.due_date>? OR t.due_date IS NULL)"; a.append(end.isoformat())
+    elif due=="Später": sql+=" AND t.due_date>?"; a.append(end.isoformat())
     elif due=="Ohne Fälligkeit": sql+=" AND t.due_date IS NULL"
     sql+=" ORDER BY CASE priority WHEN 'important_urgent' THEN 1 WHEN 'important_not_urgent' THEN 2 WHEN 'not_important_urgent' THEN 3 ELSE 4 END, CASE WHEN due_date IS NULL THEN 1 ELSE 0 END,due_date,id DESC"
     r=c.execute(sql,a).fetchall(); c.close(); return r
