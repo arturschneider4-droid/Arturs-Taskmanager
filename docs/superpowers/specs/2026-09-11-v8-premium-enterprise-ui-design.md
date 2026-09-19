@@ -1,7 +1,7 @@
 # Arturs Taskmanager V8 – Premium Enterprise UI Design Specification
 
-**Date:** 2026-09-11  
-**Status:** Design approved in conversation; implementation not yet approved  
+**Date:** 2026-09-11
+**Status:** Implemented on `feature/v8-premium-enterprise-ui`
 **Base:** V7.1 / `feature/v7-professional-desktop-ui`
 
 ## 1. Goal
