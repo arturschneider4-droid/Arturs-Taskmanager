@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QApplication, QPushButton, QToolButton
 
 import taskmanager.db as db
 import taskmanager.ui as ui
+import taskmanager.style_v8 as style_v8
 from taskmanager.style_v8 import rebuild_v8_shell
 
 
@@ -68,6 +69,8 @@ def test_v8_theme_selection_updates_project_and_returns_to_tasks(v8_window):
 
     assert window.project_filter == item.data(Qt.UserRole)
     assert window.stack.currentWidget() is window.tasks_page
+    chips = window._v8_filter_chips.findChildren(QPushButton, "v8Chip")
+    assert any(chip.property("filterKey") == "theme" for chip in chips)
 
 
 def test_v8_toolbar_and_responsive_controls_change_state(v8_window):
@@ -89,9 +92,11 @@ def test_v8_toolbar_and_responsive_controls_change_state(v8_window):
     compact.click()
     assert window.table.verticalHeader().defaultSectionSize() != initial_height
 
-    initial_sort = window.sort_mode
-    sort.click()
-    assert window.sort_mode != initial_sort
+    assert hasattr(style_v8, "_create_sort_menu")
+    menu = style_v8._create_sort_menu(window, sort)
+    title_action = next(action for action in menu.actions() if action.text() == "Titel")
+    title_action.trigger()
+    assert window.sort_mode == 2
 
     assert window._v8_nav.width() == 228
     collapse.click()
@@ -116,3 +121,84 @@ def test_v8_detail_toggle_tracks_requested_state_while_responsive_layout_hides_p
 
     detail.click()
     assert panel.panel_open is True
+
+
+def test_active_filter_is_visible_as_removable_chip(v8_window):
+    window = v8_window
+    window.pfilter.setCurrentIndex(1)
+    QApplication.processEvents()
+
+    chips = window._v8_filter_chips.findChildren(QPushButton, "v8Chip")
+    priority_chip = next(chip for chip in chips if chip.property("filterKey") == "priority")
+    assert "Priorität:" in priority_chip.text()
+
+    priority_chip.click()
+    QApplication.processEvents()
+    assert window.pfilter.currentIndex() == 0
+
+
+def test_grouping_state_is_visible_and_can_be_cleared(v8_window):
+    window = v8_window
+    style_v8._set_group(window, "Themengebiet")
+    QApplication.processEvents()
+
+    chips = window._v8_filter_chips.findChildren(QPushButton, "v8Chip")
+    group_chip = next(chip for chip in chips if chip.property("filterKey") == "group")
+    assert group_chip.text() == "Gruppiert: Themengebiet  ×"
+
+    group_chip.click()
+    QApplication.processEvents()
+    assert window._v8_group == "Keine Gruppierung"
+
+
+def test_grouping_reorders_widget_backed_theme_column(v8_window):
+    window = v8_window
+    connection = db.connect()
+    first_project = connection.execute(
+        "SELECT id FROM projects WHERE name=?", ("V8 Testgebiet",)
+    ).fetchone()["id"]
+    second_project = connection.execute(
+        "INSERT INTO projects(name) VALUES (?)", ("Anderes Gebiet",)
+    ).lastrowid
+    connection.commit()
+    connection.close()
+
+    def task_data(title, project_id):
+        return {
+            "title": title,
+            "description": "",
+            "project_id": project_id,
+            "priority": "important_not_urgent",
+            "due_date": None,
+            "status": "Offen",
+            "recurrence": "none",
+            "subtasks": [],
+        }
+
+    db.save(task_data("Zweiter", first_project), make_backup=False)
+    db.save(task_data("Erster", second_project), make_backup=False)
+    db.save(task_data("Dritter", first_project), make_backup=False)
+    window.refresh_all()
+
+    style_v8._set_group(window, "Themengebiet")
+    QApplication.processEvents()
+    themes = [window.table.cellWidget(row, 2).text() for row in range(window.table.rowCount())]
+    assert themes == sorted(themes, key=str.casefold)
+
+
+def test_removing_scope_due_chip_resets_scope_state(v8_window):
+    window = v8_window
+    window.set_scope("Heute")
+    QApplication.processEvents()
+    due_chip = next(
+        chip
+        for chip in window._v8_filter_chips.findChildren(QPushButton, "v8Chip")
+        if chip.property("filterKey") == "due"
+    )
+
+    due_chip.click()
+    QApplication.processEvents()
+
+    assert window.scope == "Alle"
+    all_scope = next(button for key, button in window._v8_scopes if key == "Alle")
+    assert all_scope.property("active") == "true"

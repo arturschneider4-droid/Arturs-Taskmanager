@@ -2,7 +2,7 @@ name: Build Windows
 
 on:
   push:
-    branches: [ main, 'feature/v64-premium-enterprise', 'feature/v7-professional-desktop-ui', 'feature/v8-premium-enterprise-ui' ]
+    branches: [ main, 'feature/v64-premium-enterprise', 'feature/v7-professional-desktop-ui', 'feature/v8-premium-enterprise-ui', 'release/v8.0-final' ]
   workflow_dispatch:
 
 permissions:
@@ -39,7 +39,7 @@ jobs:
       - name: Build EXE
         shell: pwsh
         run: |
-          pyinstaller --noconfirm --clean --windowed --name ArtursTaskmanager --collect-submodules taskmanager --hidden-import taskmanager.v8_kanban --hidden-import taskmanager.v8_eisenhower --hidden-import taskmanager.v8_planning main.py
+          pyinstaller --noconfirm --clean --windowed --name ArtursTaskmanager --collect-submodules taskmanager --collect-submodules openpyxl --hidden-import taskmanager.v8_kanban --hidden-import taskmanager.v8_eisenhower --hidden-import taskmanager.v8_planning main.py
 
       - name: Verify V8 release output
         shell: pwsh
@@ -48,7 +48,7 @@ jobs:
             throw 'PyInstaller did not produce the expected ArtursTaskmanager.exe'
           }
           $xref = Get-Content build/ArtursTaskmanager/xref-ArtursTaskmanager.html -Raw
-          foreach ($module in @('taskmanager.v8_kanban', 'taskmanager.v8_eisenhower', 'taskmanager.v8_planning')) {
+          foreach ($module in @('taskmanager.v8_kanban', 'taskmanager.v8_eisenhower', 'taskmanager.v8_planning', 'openpyxl')) {
             if ($xref -notmatch [regex]::Escape($module)) {
               throw "PyInstaller cross-reference does not contain $module"
             }
@@ -68,13 +68,13 @@ jobs:
       - name: Create ZIP
         shell: pwsh
         run: |
-          Compress-Archive -Path dist/ArtursTaskmanager/* -DestinationPath ArtursTaskmanager-Windows.zip -Force
+          Compress-Archive -Path dist/ArtursTaskmanager/* -DestinationPath ArtursTaskmanager-V8.0-Windows.zip -Force
 
       - name: Upload Windows ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: ArtursTaskmanager-Windows
-          path: ArtursTaskmanager-Windows.zip
+          name: ArtursTaskmanager-V8.0-Windows
+          path: ArtursTaskmanager-V8.0-Windows.zip
           if-no-files-found: error
 
       - name: Upload EXE folder

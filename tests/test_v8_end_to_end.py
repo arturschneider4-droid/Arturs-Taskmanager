@@ -7,6 +7,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtWidgets import QApplication
 
 import taskmanager.db as db
+import taskmanager.app as app_module
 from taskmanager.editor_controls_v7 import configure_editor_subtask_controls
 from taskmanager.responsive_table_v7 import configure_responsive_task_area
 from taskmanager.style_v7 import rebuild_professional_shell
@@ -128,6 +129,29 @@ def test_v8_minimum_window_hides_detail_and_collapses_navigation(tmp_path, monke
         assert window._v8_detail_panel.panel_open is True
         assert window._v8_nav.width() == 60
         assert window.table.width() >= 800
+    finally:
+        window.close()
+        window.deleteLater()
+        app.processEvents()
+
+
+def test_exact_production_shell_keeps_refresh_widgets_alive(tmp_path, monkeypatch):
+    monkeypatch.setattr(db, "APP_DIR", tmp_path)
+    monkeypatch.setattr(db, "DB_PATH", tmp_path / "tasks.db")
+    monkeypatch.setattr(db, "BACKUP_DIR", tmp_path / "backups")
+    db.init_db()
+
+    assert hasattr(app_module, "configure_main_window")
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow()
+    try:
+        app_module.configure_main_window(window)
+        window.show()
+        app.processEvents()
+        window.sort_mode = 2
+        window.refresh_all()
+        app.processEvents()
+        assert all(label.text().isdigit() for label in window.overview_labels.values())
     finally:
         window.close()
         window.deleteLater()

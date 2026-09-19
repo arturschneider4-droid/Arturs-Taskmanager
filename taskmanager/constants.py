@@ -34,10 +34,10 @@ PRIORITY_LIGHTS={
     "not_important_not_urgent": ("green","gray","gray"),
 }
 
-# V6.1 reference UI specification (kept independent from Qt so it can be tested offline).
+# Current reference UI specification (kept independent from Qt so it can be tested offline).
 UI_SPEC = {
     "brand": "Arturs Taskmanager",
-    "version": "V6.2",
+    "version": "V8.0",
     "sidebar_width": 238,
     "sidebar_section_spacing": 12,
     "theme_item_height": 40,

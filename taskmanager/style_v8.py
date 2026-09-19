@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton,
     QVBoxLayout, QWidget, QToolButton, QMenu, QHeaderView, QAbstractItemView,
+    QTableWidgetItem,
 )
 
 from .constants import PRIORITY_LIGHTS
@@ -34,6 +35,8 @@ QPushButton#v8Scope:hover { color: #005C8D; background: #EEF4F7; }
 QPushButton#v8Scope[active="true"] { color: #0050A4; border-bottom-color: #0050A4; }
 QPushButton#v8Tool { background: #FFFFFF; border: 1px solid #D4DEE4; border-radius: 5px; color: #4A5E69; padding: 6px 9px; font-weight: 600; }
 QPushButton#v8Tool:hover { background: #F2F6F8; border-color: #B7C8D2; }
+QPushButton#v8Chip { background: #E7F1FA; border: 1px solid #B9D5E8; border-radius: 10px; color: #0050A4; padding: 3px 8px; font-size: 8pt; }
+QPushButton#v8Chip:hover { background: #D8EAF6; border-color: #8FB9D0; }
 QPushButton#v8Primary { background: #0050A4; color: #FFFFFF; border: 0; border-radius: 6px; padding: 8px 14px; font-weight: 700; }
 QPushButton#v8Primary:hover { background: #0068C9; }
 QPushButton#v8Primary:pressed { background: #00458F; }
@@ -100,10 +103,11 @@ def _install_scope_row(window, parent_layout):
         b = QPushButton(text); b.setObjectName("v8Scope"); b.setCheckable(True); b.setToolTip(text); b.clicked.connect(lambda _=False, k=key: window.set_scope(k)); row.addWidget(b); window._v8_scopes.append((key, b))
     row.addStretch(1)
     filter_b = QPushButton("Filter"); filter_b.setObjectName("v8Tool"); filter_b.clicked.connect(lambda: _show_filter_menu(window, filter_b)); row.addWidget(filter_b)
-    sort_b = QPushButton("Sortieren"); sort_b.setObjectName("v8Tool"); sort_b.clicked.connect(window.cycle_sort); row.addWidget(sort_b)
+    sort_b = QPushButton("Sortieren"); sort_b.setObjectName("v8Tool"); sort_b.clicked.connect(lambda: _show_sort_menu(window, sort_b)); row.addWidget(sort_b)
     group_b = QPushButton("Gruppieren"); group_b.setObjectName("v8Tool"); group_b.clicked.connect(lambda: _show_group_menu(window, group_b)); row.addWidget(group_b)
     compact = QPushButton("Liste / Kompakt"); compact.setObjectName("v8Tool"); compact.clicked.connect(lambda: _toggle_compact(window)); row.addWidget(compact)
     parent_layout.addLayout(row)
+    _install_filter_chips(window, parent_layout)
 
 
 def _show_filter_menu(window, anchor):
@@ -117,6 +121,27 @@ def _show_filter_menu(window, anchor):
     menu.exec(anchor.mapToGlobal(anchor.rect().bottomLeft()))
 
 
+def _set_sort_mode(window, mode):
+    window.sort_mode = int(mode)
+    if hasattr(window, "refresh_all"):
+        window.refresh_all()
+
+
+def _create_sort_menu(window, anchor):
+    menu = QMenu(anchor)
+    for label, mode in (("Priorität", 0), ("Fälligkeit", 1), ("Titel", 2)):
+        action = menu.addAction(label)
+        action.setCheckable(True)
+        action.setChecked(getattr(window, "sort_mode", 0) == mode)
+        action.triggered.connect(lambda checked=False, value=mode: _set_sort_mode(window, value))
+    return menu
+
+
+def _show_sort_menu(window, anchor):
+    menu = _create_sort_menu(window, anchor)
+    menu.exec(anchor.mapToGlobal(anchor.rect().bottomLeft()))
+
+
 def _show_group_menu(window, anchor):
     menu = QMenu(anchor)
     for label in ["Keine Gruppierung", "Themengebiet", "Priorität", "Fälligkeit", "Status"]:
@@ -127,13 +152,104 @@ def _show_group_menu(window, anchor):
 def _set_group(window, group):
     window._v8_group = group
     if hasattr(window, "refresh_all"): window.refresh_all()
+    _apply_v8_grouping(window)
+    _refresh_filter_chips(window)
+
+
+def _reset_filter(window, widget):
+    if widget is getattr(window, "dfilter", None) and getattr(window, "scope", "Alle") != "Alle":
+        window.set_scope("Alle")
+        _sync_active_nav(window, "tasks")
+        _refresh_filter_chips(window)
+        return
+    widget.setCurrentIndex(0)
+    _refresh_filter_chips(window)
+
+
+def _refresh_filter_chips(window):
+    container = getattr(window, "_v8_filter_chips", None)
+    if container is None:
+        return
+    layout = container.layout()
+    while layout.count():
+        item = layout.takeAt(0)
+        widget = item.widget()
+        if widget is not None:
+            widget.deleteLater()
+
+    filters = (
+        ("priority", "Priorität", getattr(window, "pfilter", None)),
+        ("status", "Status", getattr(window, "sfilter", None)),
+        ("due", "Fälligkeit", getattr(window, "dfilter", None)),
+        ("theme", "Thema", getattr(window, "theme_filter", None)),
+    )
+    for key, label, widget in filters:
+        if widget is None or widget.currentIndex() <= 0:
+            continue
+        chip = QPushButton(f"{label}: {widget.currentText()}  ×")
+        chip.setObjectName("v8Chip")
+        chip.setProperty("filterKey", key)
+        chip.setToolTip(f"Filter {label} entfernen")
+        chip.clicked.connect(lambda checked=False, control=widget: _reset_filter(window, control))
+        layout.addWidget(chip)
+
+    group = getattr(window, "_v8_group", "Keine Gruppierung")
+    if group != "Keine Gruppierung":
+        chip = QPushButton(f"Gruppiert: {group}  ×")
+        chip.setObjectName("v8Chip")
+        chip.setProperty("filterKey", "group")
+        chip.setToolTip("Gruppierung entfernen")
+        chip.clicked.connect(lambda: _set_group(window, "Keine Gruppierung"))
+        layout.addWidget(chip)
+    layout.addStretch(1)
+
+
+def _install_filter_chips(window, parent_layout):
+    container = QWidget()
+    layout = QHBoxLayout(container)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(6)
+    window._v8_filter_chips = container
+    parent_layout.addWidget(container)
+    for name in ("pfilter", "sfilter", "dfilter", "theme_filter"):
+        widget = getattr(window, name, None)
+        if widget is not None:
+            widget.currentIndexChanged.connect(lambda _=0: _refresh_filter_chips(window))
+    _refresh_filter_chips(window)
 
 
 def _apply_v8_grouping(window):
     table = getattr(window, "table", None)
     if table is None: return
     column = {"Themengebiet": 2, "Priorität": 3, "Fälligkeit": 4, "Status": 5}.get(getattr(window, "_v8_group", "Keine Gruppierung"))
-    if column is not None: table.sortItems(column, Qt.AscendingOrder)
+    if column is None:
+        return
+    priority_order = {
+        "important_urgent": "0",
+        "important_not_urgent": "1",
+        "not_important_urgent": "2",
+        "not_important_not_urgent": "3",
+    }
+    for row in range(table.rowCount()):
+        if column == 4:
+            continue
+        cell = table.cellWidget(row, column)
+        if column in (2, 5):
+            key = cell.text() if cell is not None and hasattr(cell, "text") else ""
+        else:
+            priority = ""
+            if cell is not None:
+                priority = next(
+                    (child.priority for child in cell.findChildren(QWidget) if hasattr(child, "priority")),
+                    "",
+                )
+            key = priority_order.get(priority, "9")
+        item = table.item(row, column)
+        if item is None:
+            item = QTableWidgetItem()
+            table.setItem(row, column, item)
+        item.setData(Qt.DisplayRole, key)
+    table.sortItems(column, Qt.AscendingOrder)
 
 
 def _toggle_compact(window):
@@ -162,6 +278,7 @@ def _build_navigation(window, root_layout):
         window.set_project(pid)
         window.set_view("tasks")
         _sync_active_nav(window, "tasks")
+        _refresh_filter_chips(window)
     def refresh_themes():
         themes.blockSignals(True); themes.clear(); source = getattr(window, "projects", None)
         if source is not None:
@@ -241,6 +358,7 @@ def _v8_refresh(window):
     count = getattr(window,"_v8_count",None); table = getattr(window,"table",None)
     if count is not None and table is not None: count.setText(f"{table.rowCount()} Aufgaben")
     for key, button in getattr(window,"_v8_scopes",[]): _set_property(button,"active","true" if getattr(window,"scope","Alle")==key else "false"); button.setChecked(getattr(window,"scope","Alle")==key)
+    _refresh_filter_chips(window)
     _apply_v8_grouping(window)
     controller = getattr(window, "_v8_kanban", None)
     if controller is not None: controller.apply()

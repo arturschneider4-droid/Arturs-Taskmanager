@@ -42,6 +42,53 @@ def _install_v7_secondary_actions(window):
     return _install_v8_secondary_actions(window)
 
 
+def _sync_startup_undo_state(window):
+    available = bool(latest_backup())
+    window._undo_available = available
+    window.undo_button.setEnabled(available)
+    return available
+
+
+def configure_main_window(window):
+    install_overview_navigation(window)
+    apply_v63_visuals(window)
+    apply_v64_visuals(window)
+
+    # Initialize the complete V7 shell first. V8 replaces its presentation
+    # shell afterwards, but keeps the initialized functional widgets and
+    # lifetime references so V7 startup utilities remain intact.
+    legacy_shell = window.centralWidget()
+    window._legacy_shell = legacy_shell
+    rebuild_professional_shell(window)
+    v7_shell = window.centralWidget()
+    window._v7_legacy_shell = v7_shell
+    if hasattr(window, "version_label"):
+        window.version_label.setText(f"V{VERSION}")
+
+    rebuild_v8_shell(window)
+    window._v8_legacy_shell = v7_shell
+    configure_responsive_task_area(window)
+    configure_editor_subtask_controls(window)
+    apply_workspace_interaction_fixes(window)
+    install_drop_guard(window)
+    _install_v7_secondary_actions(window)
+    _install_v8_secondary_actions(window)
+    install_v8_responsive_behavior(window)
+
+    original_refresh_all = window.refresh_all
+
+    def refresh_all_v8():
+        original_refresh_all()
+        from .style_v8 import _v8_refresh
+        _v8_refresh(window)
+
+    window.refresh_all = refresh_all_v8
+    _sync_startup_undo_state(window)
+    window.setMinimumSize(980, 700)
+    window.setWindowTitle(f"Arturs Taskmanager V{VERSION}")
+    return window
+
+
 def main():
     init_db()
     if DB_PATH.exists() and DB_PATH.stat().st_size > 0:
@@ -50,41 +97,7 @@ def main():
     a = QApplication(sys.argv)
     a.setStyle("Fusion")
     a.setStyleSheet(STYLE + V63_STYLE + V64_STYLE + V7_STYLE + V8_STYLE)
-    w = MainWindow()
-    install_overview_navigation(w)
-    apply_v63_visuals(w)
-    apply_v64_visuals(w)
-
-    # Initialize the complete V7 shell first. V8 replaces its presentation
-    # shell afterwards, but keeps the initialized functional widgets and
-    # lifetime references so V7 startup utilities remain intact.
-    rebuild_professional_shell(w)
-    legacy_shell = w.centralWidget()
-    w._v7_legacy_shell = legacy_shell
-    if hasattr(w, "version_label"):
-        w.version_label.setText(f"V{VERSION}")
-
-    rebuild_v8_shell(w)
-    w._v8_legacy_shell = legacy_shell
-    configure_responsive_task_area(w)
-    configure_editor_subtask_controls(w)
-    apply_workspace_interaction_fixes(w)
-    install_drop_guard(w)
-    _install_v7_secondary_actions(w)
-    _install_v8_secondary_actions(w)
-    install_v8_responsive_behavior(w)
-
-    original_refresh_all = w.refresh_all
-
-    def refresh_all_v8():
-        original_refresh_all()
-        from .style_v8 import _v8_refresh
-        _v8_refresh(w)
-
-    w.refresh_all = refresh_all_v8
-    w.undo_button.setEnabled(bool(latest_backup()))
-    w.setMinimumSize(980, 700)
-    w.setWindowTitle(f"Arturs Taskmanager V{VERSION}")
+    w = configure_main_window(MainWindow())
     w.show()
     sys.exit(a.exec())
 

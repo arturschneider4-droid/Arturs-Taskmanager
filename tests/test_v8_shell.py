@@ -58,7 +58,7 @@ def test_v8_secondary_and_toolbar_buttons_have_handlers():
         'detail.clicked.connect',
         'primary.clicked.connect(window.new_task)',
         'filter_b.clicked.connect',
-        'sort_b.clicked.connect(window.cycle_sort)',
+        'sort_b.clicked.connect(lambda: _show_sort_menu(window, sort_b))',
         'group_b.clicked.connect',
         'compact.clicked.connect',
         'collapse.clicked.connect',

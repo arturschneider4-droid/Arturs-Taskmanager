@@ -17,8 +17,8 @@ def test_responsive_policy_reserves_real_layout_space():
 def test_responsive_table_is_wired_after_v7_shell():
     text = APP.read_text(encoding="utf-8")
     assert "from .responsive_table_v7 import configure_responsive_task_area" in text
-    assert "configure_responsive_task_area(w)" in text
-    assert text.index("rebuild_professional_shell(w)") < text.index("configure_responsive_task_area(w)")
+    assert "configure_responsive_task_area(window)" in text
+    assert text.index("rebuild_professional_shell(window)") < text.index("configure_responsive_task_area(window)")
 
 
 def test_v7_minimum_window_is_large_enough_for_both_panes():
