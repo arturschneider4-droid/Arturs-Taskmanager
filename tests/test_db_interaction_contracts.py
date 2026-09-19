@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import sqlite3
 
 
 def _task(title, due=None, status="Offen", priority="important_not_urgent"):
@@ -68,3 +69,59 @@ def test_delete_cascades_subtasks(monkeypatch, tmp_path):
     db.remove(tid)
     assert db.task(tid) is None
     assert db.subs(tid) == []
+
+
+def test_init_db_migrates_legacy_tasks_without_overwriting_user_data(monkeypatch, tmp_path):
+    from taskmanager import db
+
+    db_path = tmp_path / "tasks.db"
+    connection = sqlite3.connect(db_path)
+    connection.executescript(
+        """
+        CREATE TABLE projects(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE);
+        CREATE TABLE tasks(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          description TEXT NOT NULL DEFAULT '',
+          project_id INTEGER,
+          priority TEXT NOT NULL DEFAULT 'important_not_urgent',
+          due_date TEXT,
+          status TEXT NOT NULL DEFAULT 'Offen',
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        INSERT INTO tasks(title, description, priority, status)
+        VALUES ('Bestehende Aufgabe', 'Bleibt erhalten', 'important_urgent', 'In Arbeit');
+        """
+    )
+    connection.commit()
+    connection.close()
+
+    monkeypatch.setattr(db, "APP_DIR", tmp_path)
+    monkeypatch.setattr(db, "DB_PATH", db_path)
+    monkeypatch.setattr(db, "BACKUP_DIR", tmp_path / "backups")
+    db.init_db()
+
+    migrated = db.task(1)
+    assert migrated["title"] == "Bestehende Aufgabe"
+    assert migrated["description"] == "Bleibt erhalten"
+    assert migrated["priority"] == "important_urgent"
+    assert migrated["status"] == "In Arbeit"
+    assert migrated["recurrence"] == "none"
+    assert migrated["updated_at"]
+
+
+def test_backup_restore_round_trip_recovers_previous_task_state(monkeypatch, tmp_path):
+    from taskmanager import db
+
+    monkeypatch.setattr(db, "APP_DIR", tmp_path)
+    monkeypatch.setattr(db, "DB_PATH", tmp_path / "tasks.db")
+    monkeypatch.setattr(db, "BACKUP_DIR", tmp_path / "backups")
+    db.init_db()
+    task_id = db.save(_task("Vor Änderung"), make_backup=False)
+    snapshot = db.backup_db("regression")
+
+    db.save({**_task("Nach Änderung"), "description": "neu"}, task_id, make_backup=False)
+    assert db.task(task_id)["title"] == "Nach Änderung"
+
+    db.restore_backup(snapshot)
+    assert db.task(task_id)["title"] == "Vor Änderung"

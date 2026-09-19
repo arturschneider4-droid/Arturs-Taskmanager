@@ -35,7 +35,11 @@ def init_db():
     if "recurrence" not in cols:
         c.execute("ALTER TABLE tasks ADD COLUMN recurrence TEXT NOT NULL DEFAULT 'none'")
     if "updated_at" not in cols:
-        c.execute("ALTER TABLE tasks ADD COLUMN updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP")
+        # SQLite does not permit a non-constant CURRENT_TIMESTAMP default when
+        # adding a column to an existing table. Add it without a default, then
+        # preserve the best timestamp already available for every legacy row.
+        c.execute("ALTER TABLE tasks ADD COLUMN updated_at TEXT")
+        c.execute("UPDATE tasks SET updated_at=COALESCE(created_at, CURRENT_TIMESTAMP)")
     c.commit(); c.close()
 
 
