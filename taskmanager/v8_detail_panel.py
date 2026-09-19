@@ -14,7 +14,7 @@ class V8DetailPanel(QObject):
     MIN_WIDTH = 320
     MAX_WIDTH = 650
     DEFAULT_WIDTH = 380
-    NARROW_BREAKPOINT = 960
+    NARROW_BREAKPOINT = 1200
 
     V8_TASK_ROLES = (
         "v8TaskRow", "v8TaskTitle", "v8TaskMeta", "v8TaskStatus",

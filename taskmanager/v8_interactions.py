@@ -37,7 +37,7 @@ def scope_for_view(view_key):
 def responsive_layout(width, detail_open, nav_collapsed):
     # Detail is removed before the workspace becomes too narrow; navigation
     # follows at the compact breakpoint.
-    if width < 960:
+    if width < 1200:
         return {"detail_visible": False, "nav_collapsed": True}
     return {
         "detail_visible": bool(detail_open),

@@ -35,7 +35,8 @@ def test_supported_views_map_to_existing_scopes():
 
 def test_responsive_layout_hides_detail_before_workspace_becomes_unusable():
     assert responsive_layout(1500, True, False)["detail_visible"] is True
-    assert responsive_layout(1100, True, False)["detail_visible"] is True
+    assert responsive_layout(1200, True, False)["detail_visible"] is True
+    assert responsive_layout(1100, True, False)["detail_visible"] is False
     narrow = responsive_layout(900, True, False)
     assert narrow["detail_visible"] is False
     assert narrow["nav_collapsed"] is True

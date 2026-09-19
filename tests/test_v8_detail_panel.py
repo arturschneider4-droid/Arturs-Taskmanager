@@ -12,7 +12,7 @@ def test_v8_detail_panel_contract_exists():
         "task_id",
         "panel_open",
         "panel_width",
-        "NARROW_BREAKPOINT = 960",
+        "NARROW_BREAKPOINT = 1200",
     ):
         assert token in text
 
