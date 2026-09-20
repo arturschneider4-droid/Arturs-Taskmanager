@@ -604,7 +604,7 @@ class MainWindow(QMainWindow):
             width = max(
                 [default_width]
                 + [
-                    self.table.cellWidget(row, column).minimumSizeHint().width() + 2
+                    self.table.cellWidget(row, column).minimumSizeHint().width() + 20
                     for row in range(self.table.rowCount())
                     if self.table.cellWidget(row, column) is not None
                 ]

@@ -35,7 +35,7 @@ def _fit_badge_columns(table):
         for row in range(table.rowCount()):
             widget = table.cellWidget(row, column)
             if widget is not None:
-                width = max(width, widget.minimumSizeHint().width() + 2)
+                width = max(width, widget.minimumSizeHint().width() + 20)
                 widget.setMaximumWidth(16777215)
         header.setSectionResizeMode(column, QHeaderView.Fixed)
         table.setColumnWidth(column, width)
