@@ -1,0 +1,471 @@
+[
+  {
+    "run": 1,
+    "test": "undo_save",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "undo_priority",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "undo_duplicate",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "undo_status",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "undo_delete",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "undo_planning",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "save_persistence",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "unsaved_editor_survives_search",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "cancel_priority_restores_original",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "recurring_task_has_next_occurrence",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "visible_inspector_kanban",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "selected_task_kanban",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "visible_inspector_eisenhower",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "selected_task_eisenhower",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "visible_inspector_planning",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "selected_task_planning",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "sort_0",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "sort_1",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "sort_2",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "chronological_grouping",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "filter_combinations",
+    "passed": true,
+    "detail": "100"
+  },
+  {
+    "run": 1,
+    "test": "board_respects_active_status_filter",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "scope_matches_cleared_status",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "compact_changes_existing_row_height",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "excel_export",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 1,
+    "test": "database_integrity",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "undo_save",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "undo_priority",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "undo_duplicate",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "undo_status",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "undo_delete",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "undo_planning",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "save_persistence",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "unsaved_editor_survives_search",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "cancel_priority_restores_original",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "recurring_task_has_next_occurrence",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "visible_inspector_kanban",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "selected_task_kanban",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "visible_inspector_eisenhower",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "selected_task_eisenhower",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "visible_inspector_planning",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "selected_task_planning",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "sort_0",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "sort_1",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "sort_2",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "chronological_grouping",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "filter_combinations",
+    "passed": true,
+    "detail": "100"
+  },
+  {
+    "run": 2,
+    "test": "board_respects_active_status_filter",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "scope_matches_cleared_status",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "compact_changes_existing_row_height",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "excel_export",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 2,
+    "test": "database_integrity",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "undo_save",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "undo_priority",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "undo_duplicate",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "undo_status",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "undo_delete",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "undo_planning",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "save_persistence",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "unsaved_editor_survives_search",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "cancel_priority_restores_original",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "recurring_task_has_next_occurrence",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "visible_inspector_kanban",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "selected_task_kanban",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "visible_inspector_eisenhower",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "selected_task_eisenhower",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "visible_inspector_planning",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "selected_task_planning",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "sort_0",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "sort_1",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "sort_2",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "chronological_grouping",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "filter_combinations",
+    "passed": true,
+    "detail": "100"
+  },
+  {
+    "run": 3,
+    "test": "board_respects_active_status_filter",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "scope_matches_cleared_status",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "compact_changes_existing_row_height",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "excel_export",
+    "passed": true,
+    "detail": ""
+  },
+  {
+    "run": 3,
+    "test": "database_integrity",
+    "passed": true,
+    "detail": ""
+  }
+]
+SUMMARY 78 39

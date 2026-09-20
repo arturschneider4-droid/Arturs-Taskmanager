@@ -93,10 +93,6 @@ class V8DetailPanel(QObject):
                 self.editor.setVisible(False)
             else:
                 self.editor.setVisible(self._requested_open)
-                if self.editor.isVisible() and self._task_id is not None:
-                    select_task = getattr(self.window, "select_task", None)
-                    if callable(select_task):
-                        select_task(self._task_id)
         finally:
             self._responsive_update = False
         self._apply_width()

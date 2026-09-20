@@ -262,7 +262,11 @@ def _apply_v8_grouping(window):
 def _toggle_compact(window):
     window._v8_compact = not getattr(window, "_v8_compact", False)
     table = getattr(window, "table", None)
-    if table is not None: table.verticalHeader().setDefaultSectionSize(30 if window._v8_compact else 42)
+    if table is not None:
+        height = 30 if window._v8_compact else 52
+        table.verticalHeader().setDefaultSectionSize(height)
+        for row in range(table.rowCount()):
+            table.setRowHeight(row, height)
 
 
 def _build_navigation(window, root_layout):
@@ -321,7 +325,7 @@ def _install_task_surface(window, workspace_layout):
 
 
 def _install_title_and_toolbar(window, layout):
-    header = QHBoxLayout(); box = QVBoxLayout(); title = QLabel("Aufgaben"); title.setObjectName("v8HeaderTitle"); box.addWidget(title); count = QLabel("0 Aufgaben"); count.setObjectName("v8Count"); box.addWidget(count); window._v8_count = count; header.addLayout(box); header.addStretch()
+    header = QHBoxLayout(); box = QVBoxLayout(); title = QLabel("Aufgaben"); title.setObjectName("v8HeaderTitle"); window.title_label = title; box.addWidget(title); count = QLabel("0 Aufgaben"); count.setObjectName("v8Count"); box.addWidget(count); window._v8_count = count; header.addLayout(box); header.addStretch()
     detail = QPushButton("Detail"); detail.setObjectName("v8Tool"); detail.setToolTip("Detailpanel ein-/ausblenden"); detail.clicked.connect(lambda: _toggle_detail(window)); header.addWidget(detail)
     primary = QPushButton("＋  Aufgabe"); primary.setObjectName("v8Primary"); primary.setToolTip("Neue Aufgabe anlegen"); primary.clicked.connect(window.new_task); header.addWidget(primary); layout.addLayout(header); _install_scope_row(window, layout)
 
@@ -349,7 +353,7 @@ def rebuild_v8_shell(window):
                 widget.setParent(None)
         old.hide()
     root = QWidget(); root.setObjectName("v8Shell"); outer = QVBoxLayout(root); outer.setContentsMargins(0,0,0,0); outer.setSpacing(0)
-    top = QFrame(); top.setObjectName("v8Topbar"); top.setFixedHeight(52); tl = QHBoxLayout(top); tl.setContentsMargins(14,7,14,7); brand = QLabel("Arturs Taskmanager"); brand.setObjectName("v8Brand"); tl.addWidget(brand); version = QLabel("V8.0"); version.setObjectName("v8Meta"); tl.addWidget(version); offline = QLabel("● Lokal · Offline"); offline.setObjectName("v8Meta"); tl.addWidget(offline); tl.addStretch()
+    top = QFrame(); top.setObjectName("v8Topbar"); top.setFixedHeight(52); tl = QHBoxLayout(top); tl.setContentsMargins(14,7,14,7); brand = QLabel("Arturs Taskmanager"); brand.setObjectName("v8Brand"); tl.addWidget(brand); version = QLabel("V9.0"); version.setObjectName("v8Meta"); tl.addWidget(version); offline = QLabel("● Lokal · Offline"); offline.setObjectName("v8Meta"); tl.addWidget(offline); tl.addStretch()
     search = getattr(window, "global_search", None)
     if search is not None: search.setMaximumWidth(280); search.setPlaceholderText("Suche  ·  Strg + F"); tl.addWidget(search)
     undo = getattr(window, "undo_button", None)
@@ -357,6 +361,11 @@ def rebuild_v8_shell(window):
     outer.addWidget(top)
     body = QWidget(); body_l = QHBoxLayout(body); body_l.setContentsMargins(0,0,0,0); body_l.setSpacing(0); outer.addWidget(body,1); _build_navigation(window, body_l)
     workspace = QWidget(); workspace.setObjectName("v8Workspace"); wl = QVBoxLayout(workspace); wl.setContentsMargins(18,14,18,14); wl.setSpacing(9); _install_title_and_toolbar(window, wl); _install_task_surface(window, wl); body_l.addWidget(workspace,1)
+    # Retain legacy controls used by navigation/refresh callbacks until window teardown.
+    legacy = window.takeCentralWidget()
+    if legacy is not None:
+        legacy.setParent(window)
+        legacy.hide()
     window.setCentralWidget(root); window._v8_workspace = workspace; window._v8_shell = root; window._v8_nav_collapsed = False; window._v8_group = "Keine Gruppierung"; _style_existing_widgets(window); _sync_active_nav(window,"tasks"); install_v8_kanban(window); install_v8_eisenhower(window); install_v8_planning(window); QTimer.singleShot(0, lambda: _v8_refresh(window)); return root
 
 

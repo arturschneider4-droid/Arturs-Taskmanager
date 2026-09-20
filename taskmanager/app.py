@@ -1,5 +1,5 @@
 import sys
-from PySide6.QtWidgets import QApplication, QMessageBox, QPushButton, QHeaderView
+from PySide6.QtWidgets import QApplication, QMessageBox, QPushButton, QHeaderView, QSplitter
 from .db import init_db, DB_PATH, backup_db, latest_backup
 from .ui import MainWindow, STYLE
 from .priority_sync import apply_priority_sync
@@ -13,7 +13,7 @@ from .workspace_interactions_v7 import apply_workspace_interaction_fixes
 from .v8_interactions import install_drop_guard
 from .style_v8 import V8_STYLE, rebuild_v8_shell, install_v8_responsive_behavior
 
-VERSION = "8.0"
+VERSION = "9.0"
 V7_COMPATIBILITY_VERSION = "7.1"
 
 if not hasattr(QHeaderView, "Fixed"):
@@ -69,6 +69,18 @@ def configure_main_window(window):
     rebuild_v8_shell(window)
     window._v8_legacy_shell = v7_shell
     configure_responsive_task_area(window)
+    # The inspector belongs beside the entire view stack, not inside the tasks page.
+    workspace_layout = window._v8_workspace.layout()
+    workspace_layout.removeWidget(window.stack)
+    window.editor.setParent(None)
+    shared_splitter = QSplitter()
+    shared_splitter.addWidget(window.stack)
+    shared_splitter.addWidget(window.editor)
+    shared_splitter.setStretchFactor(0, 1)
+    shared_splitter.setChildrenCollapsible(False)
+    workspace_layout.addWidget(shared_splitter, 1)
+    window._v8_detail_panel.splitter = shared_splitter
+    window._v8_detail_panel.set_panel_open(False)
     configure_editor_subtask_controls(window)
     apply_workspace_interaction_fixes(window)
     install_drop_guard(window)

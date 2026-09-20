@@ -1,6 +1,7 @@
 from pathlib import Path
 import sqlite3
 import shutil
+import calendar
 from datetime import datetime, date, timedelta
 
 APP_DIR = Path.home() / "TaskManager"
@@ -80,10 +81,33 @@ def subs(tid):
     c=connect(); r=c.execute("SELECT * FROM subtasks WHERE task_id=? ORDER BY id",(tid,)).fetchall(); c.close(); return r
 
 
+def _create_next_occurrence(c, tid, previous_status):
+    row = c.execute("SELECT * FROM tasks WHERE id=?", (tid,)).fetchone()
+    if not row or previous_status == "Erledigt" or row["status"] != "Erledigt":
+        return
+    frequency = row["recurrence"]
+    if frequency not in {"daily", "weekly", "monthly"}:
+        return
+    current = date.fromisoformat(row["due_date"]) if row["due_date"] else date.today()
+    if frequency == "monthly":
+        year = current.year + (current.month == 12)
+        month = current.month % 12 + 1
+        following = current.replace(year=year, month=month, day=min(current.day, calendar.monthrange(year, month)[1]))
+    else:
+        following = current + timedelta(days=1 if frequency == "daily" else 7)
+    now = datetime.now().isoformat(timespec="seconds")
+    next_id = c.execute(
+        "INSERT INTO tasks(title,description,project_id,priority,due_date,status,recurrence,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
+        (row["title"], row["description"], row["project_id"], row["priority"], following.isoformat(), "Offen", frequency, now, now),
+    ).lastrowid
+    c.execute("INSERT INTO subtasks(task_id,title,done) SELECT ?,title,0 FROM subtasks WHERE task_id=?", (next_id, tid))
+
+
 def save(d, tid=None, make_backup=True):
     c=connect(); now=datetime.now().isoformat(timespec="seconds")
     if tid is not None and make_backup:
         c.close(); backup_db("before_save"); c=connect()
+    previous = c.execute("SELECT status FROM tasks WHERE id=?", (tid,)).fetchone() if tid is not None else None
     if tid is None:
         cur=c.execute("INSERT INTO tasks(title,description,project_id,priority,due_date,status,recurrence,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)",
           (d["title"],d["description"],d["project_id"],d["priority"],d["due_date"],d["status"],d["recurrence"],now,now)); tid=cur.lastrowid
@@ -93,6 +117,8 @@ def save(d, tid=None, make_backup=True):
         c.execute("DELETE FROM subtasks WHERE task_id=?",(tid,))
     for title,done in d.get("subtasks",[]):
         if title and title.strip(): c.execute("INSERT INTO subtasks(task_id,title,done) VALUES(?,?,?)",(tid,title.strip(),int(done)))
+    if previous:
+        _create_next_occurrence(c, tid, previous["status"])
     c.commit(); c.close(); return tid
 
 
@@ -103,7 +129,12 @@ def remove(tid):
 
 def update_status(tid, status):
     backup_db("before_status")
-    c=connect(); c.execute("UPDATE tasks SET status=?,updated_at=? WHERE id=?",(status,datetime.now().isoformat(timespec="seconds"),tid)); c.commit(); c.close()
+    c = connect()
+    previous = c.execute("SELECT status FROM tasks WHERE id=?", (tid,)).fetchone()
+    c.execute("UPDATE tasks SET status=?,updated_at=? WHERE id=?", (status, datetime.now().isoformat(timespec="seconds"), tid))
+    if previous:
+        _create_next_occurrence(c, tid, previous["status"])
+    c.commit(); c.close()
 
 
 def update_priority(tid, priority):

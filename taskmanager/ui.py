@@ -122,6 +122,11 @@ class PriorityCard(QPushButton):
         p.end()
 
 
+class DueDateItem(QTableWidgetItem):
+    def __lt__(self, other):
+        return (self.data(Qt.UserRole) or "9999-12-31") < (other.data(Qt.UserRole) or "9999-12-31")
+
+
 class ThemeBadge(QLabel):
     def __init__(self, text, parent=None):
         super().__init__(text or "Ohne Themengebiet", parent)
@@ -249,7 +254,7 @@ class MainWindow(QMainWindow):
         sort=QPushButton("↕  Sortierung"); sort.setObjectName("soft"); sort.clicked.connect(self.cycle_sort); self.sort_mode=0; self.scope_row.addWidget(sort); ml.addLayout(self.scope_row)
         bar=QHBoxLayout(); self.search=QLineEdit(); self.search.setPlaceholderText("Aufgaben suchen …"); self.search.textChanged.connect(self.refresh_all); bar.addWidget(self.search,1); self.pfilter=QComboBox(); self.pfilter.addItem("Alle Prioritäten",None); [self.pfilter.addItem(v,k) for k,v in PRIORITIES.items()]; self.pfilter.currentIndexChanged.connect(self.refresh_all); bar.addWidget(self.pfilter); self.sfilter=QComboBox(); self.sfilter.addItems(["Alle Status"]+STATUS); self.sfilter.currentIndexChanged.connect(self.refresh_all); bar.addWidget(self.sfilter); self.dfilter=QComboBox(); self.dfilter.addItems(["Alle Fälligkeiten","Heute","Diese Woche","Später","Ohne Fälligkeit"]); self.dfilter.currentIndexChanged.connect(self.refresh_all); bar.addWidget(self.dfilter); ml.addLayout(bar)
         self.stack=QStackedWidget(); ml.addWidget(self.stack,1); self.tasks_page=self.task_page(); self.kanban=self.kanban_page(); self.eisen=self.eisen_page(); self.plan=self.plan_page(); [self.stack.addWidget(p) for p in [self.tasks_page,self.kanban,self.eisen,self.plan]]; bl.addWidget(main,1)
-        self.shortcut("Ctrl+N",self.new_task); self.shortcut("Ctrl+F",lambda:self.search.setFocus()); self.shortcut("Delete",self.delete_selected); self.scope="Alle"
+        self.shortcut("Ctrl+N",self.new_task); self.shortcut("Ctrl+F",lambda:self.global_search.setFocus()); self.shortcut("Delete",self.delete_selected); self.scope="Alle"
 
     def shortcut(self, key, fn):
         a = QAction(self); a.setShortcut(QKeySequence(key)); a.triggered.connect(fn); self.addAction(a)
@@ -342,7 +347,7 @@ class MainWindow(QMainWindow):
         self.selected_task = self.editor_task_id
         self.refresh_all()
         self.statusBar().showMessage("Aufgabe gespeichert", 2500)
-        if hasattr(self, "undo_button"): self.undo_button.setEnabled(True)
+        if hasattr(self, "undo_button"): self._set_undo_available()
 
     def update_sub_count(self, *_):
         done = sum(self.e_subs.item(j).checkState() == Qt.Checked for j in range(self.e_subs.count()))
@@ -390,6 +395,10 @@ class MainWindow(QMainWindow):
                 try: candidate.unlink()
                 except OSError: pass
             self.selected_task = None
+            self.editor_task_id = None
+            panel = getattr(self, "_v8_detail_panel", None)
+            if panel is not None:
+                panel.clear_task()
             self.refresh_all()
             self._undo_available = False
             self.undo_button.setEnabled(False)
@@ -443,6 +452,7 @@ class MainWindow(QMainWindow):
         else:
             self.sfilter.setCurrentText("Alle Status")
             self.dfilter.setCurrentText(mapping[scope])
+        self.scope = scope
         for k, b in self.scope_buttons.items():
             b.setProperty("active", str(k == scope).lower()); b.style().unpolish(b); b.style().polish(b)
         self.refresh_all()
@@ -496,7 +506,7 @@ class MainWindow(QMainWindow):
         d = ProjectDialog(self)
         if d.exec() == QDialog.Accepted and d.name():
             try:
-                backup_db("before_project_create"); c = connect(); r = c.execute("INSERT INTO projects(name) VALUES(?)", (d.name(),)); self.project_filter = r.lastrowid; c.commit(); c.close(); self.refresh_all(); self.undo_button.setEnabled(True)
+                backup_db("before_project_create"); c = connect(); r = c.execute("INSERT INTO projects(name) VALUES(?)", (d.name(),)); self.project_filter = r.lastrowid; c.commit(); c.close(); self.refresh_all(); self._set_undo_available()
             except Exception as e: QMessageBox.warning(self, "Themengebiet", str(e))
 
     def edit_project(self, pid):
@@ -505,13 +515,13 @@ class MainWindow(QMainWindow):
         d = ProjectDialog(self, r["name"])
         if d.exec() == QDialog.Accepted and d.name():
             try:
-                backup_db("before_project_edit"); c = connect(); c.execute("UPDATE projects SET name=? WHERE id=?", (d.name(), pid)); c.commit(); c.close(); self.refresh_all(); self.undo_button.setEnabled(True)
+                backup_db("before_project_edit"); c = connect(); c.execute("UPDATE projects SET name=? WHERE id=?", (d.name(), pid)); c.commit(); c.close(); self.refresh_all(); self._set_undo_available()
             except Exception as e: QMessageBox.warning(self, "Themengebiet", str(e))
 
     def delete_project(self, pid):
         c = connect(); r = c.execute("SELECT name FROM projects WHERE id=?", (pid,)).fetchone(); c.close()
         if r and QMessageBox.question(self, "Themengebiet löschen", f"„{r['name']}“ löschen?") == QMessageBox.Yes:
-            backup_db("before_project_delete"); c = connect(); c.execute("UPDATE tasks SET project_id=NULL WHERE project_id=?", (pid,)); c.execute("DELETE FROM projects WHERE id=?", (pid,)); c.commit(); c.close(); self.project_filter = None; self.refresh_all(); self.undo_button.setEnabled(True)
+            backup_db("before_project_delete"); c = connect(); c.execute("UPDATE tasks SET project_id=NULL WHERE project_id=?", (pid,)); c.execute("DELETE FROM projects WHERE id=?", (pid,)); c.commit(); c.close(); self.project_filter = None; self.refresh_all(); self._set_undo_available()
 
     def new_task(self):
         d = TaskDialog(self, default_project=self.project_filter)
@@ -520,7 +530,7 @@ class MainWindow(QMainWindow):
             if v["title"]:
                 backup_db("before_create")
                 self.selected_task = save(v, make_backup=False)
-                self.refresh_all(); self._set_undo_available()
+                self.refresh_all(); self.select_task(self.selected_task); self._set_undo_available()
 
     def select_task(self, tid):
         self.selected_task = tid; r = task(tid)
@@ -542,21 +552,32 @@ class MainWindow(QMainWindow):
 
     def duplicate_selected(self):
         if not self.selected_task: return
-        r = task(self.selected_task); v = dict(r); v["title"] = r["title"] + " (Kopie)"; v["subtasks"] = [(x["title"], bool(x["done"])) for x in subs(self.selected_task)]; v.pop("project_name", None); self.selected_task = save(v, make_backup=True); self.refresh_all(); self.undo_button.setEnabled(True)
+        r = task(self.selected_task); v = dict(r); v["title"] = r["title"] + " (Kopie)"; v["subtasks"] = [(x["title"], bool(x["done"])) for x in subs(self.selected_task)]; v.pop("project_name", None); backup_db("before_duplicate"); self.selected_task = save(v, make_backup=False); self.refresh_all(); self.select_task(self.selected_task); self._set_undo_available()
 
     def set_status(self, tid, status):
         if not task(tid): return
         update_status(tid, status)
         self.selected_task = tid
+        if self.editor_task_id == tid:
+            self.e_status.setCurrentText(status)
         self.refresh_all()
         self._set_undo_available()
 
     def delete_selected(self):
         if self.selected_task and QMessageBox.question(self, "Aufgabe löschen", "Aufgabe wirklich löschen?") == QMessageBox.Yes:
-            remove(self.selected_task); self.selected_task = None; self.refresh_all(); self._set_undo_available()
+            remove(self.selected_task); self.selected_task = None; self.editor_task_id = None; self.editor.hide(); self.refresh_all(); self._set_undo_available()
 
     def cycle_priority(self, tid):
-        r = task(tid); keys = list(PRIORITIES); update_priority(tid, keys[(keys.index(r["priority"]) + 1) % 4]); self.refresh_all(); self.undo_button.setEnabled(True)
+        r = task(tid)
+        if r is None:
+            return
+        keys = list(PRIORITIES)
+        priority = keys[(keys.index(r["priority"]) + 1) % len(keys)]
+        update_priority(tid, priority)
+        if self.editor_task_id == tid:
+            self._editor_priority(priority)
+        self.refresh_all()
+        self._set_undo_available()
 
     def refresh_tasks(self):
         rows = tasks(self.project_filter, self.search.text(), self.pfilter.currentData(), self.sfilter.currentText(), self.dfilter.currentText())
@@ -565,18 +586,18 @@ class MainWindow(QMainWindow):
         self.count.setText(f"{len(rows)} Aufgaben")
         self.table.setRowCount(0)
         for r in rows:
-            i = self.table.rowCount(); self.table.insertRow(i); self.table.setRowHeight(i, 52)
+            i = self.table.rowCount(); self.table.insertRow(i); self.table.setRowHeight(i, 30 if getattr(self, "_v8_compact", False) else 52)
             cb = QCheckBox(); cb.setChecked(r["status"] == "Erledigt"); cb.setToolTip("Aufgabe als erledigt markieren"); cb.stateChanged.connect(lambda state, tid=r["id"]: self.set_status(tid, "Erledigt" if state == Qt.Checked.value else "Offen")); cell = QWidget(); cl = QHBoxLayout(cell); cl.setContentsMargins(8, 0, 0, 0); cl.addWidget(cb); self.table.setCellWidget(i, 0, cell)
             ss = subs(r["id"]); done = sum(bool(x["done"]) for x in ss)
             it = QTableWidgetItem(f"{r['title']}\nUnteraufgaben: {done} / {len(ss)}" if ss else r["title"]); it.setData(Qt.UserRole, r["id"]); font = it.font(); font.setWeight(QFont.DemiBold); it.setFont(font); self.table.setItem(i, 1, it)
             self.table.setCellWidget(i, 2, ThemeBadge(r["project_name"]))
             pr = QWidget(); pl = QHBoxLayout(pr); pl.setContentsMargins(4, 0, 4, 0); light = TrafficLight(r["priority"]); light.setToolTip(PRIORITIES[r["priority"]]); pl.addWidget(light); pr.mousePressEvent = lambda _e, tid=r["id"]: self.cycle_priority(tid); self.table.setCellWidget(i, 3, pr)
-            due = QTableWidgetItem(self.fmt(r["due_date"]));
+            due = DueDateItem(self.fmt(r["due_date"])); due.setData(Qt.UserRole, r["due_date"] or "9999-12-31");
             if r["due_date"] == date.today().isoformat(): due.setForeground(QColor(THEME_COLORS["red"]));
             self.table.setItem(i, 4, due)
             sb = StatusBadge(r["status"]); sb.mousePressEvent = lambda _e, tid=r["id"]: self.toggle_task(tid); self.table.setCellWidget(i, 5, sb)
             more = QPushButton("•••"); more.setObjectName("soft"); more.setFixedWidth(42); more.clicked.connect(lambda _, tid=r["id"]: self.open_task_actions(tid)); self.table.setCellWidget(i, 6, more)
-        if self.selected_task: self.select_task(self.selected_task)
+        # Refreshing a view must not overwrite an in-progress editor draft.
 
     def open_task_actions(self, tid):
         self.selected_task = tid; m = QMenu(self); m.addAction("Bearbeiten …", lambda: self.edit_task(tid)); m.addAction("Status wechseln", lambda: self.toggle_task(tid)); m.addAction("Priorität wechseln", lambda: self.cycle_priority(tid)); m.addAction("Duplizieren", self.duplicate_selected); m.addAction("Löschen …", self.delete_selected); m.exec(QCursor.pos())
@@ -586,18 +607,18 @@ class MainWindow(QMainWindow):
 
     def refresh_kanban(self):
         for w in self.kcols.values(): w.clear()
-        for r in tasks(self.project_filter):
+        for r in tasks(self.project_filter, self.search.text(), self.pfilter.currentData(), self.sfilter.currentText(), self.dfilter.currentText()):
             it = QListWidgetItem(f"{r['title']}\n{PRIORITIES[r['priority']]} · {self.fmt(r['due_date'])}"); it.setData(Qt.UserRole, r["id"]); self.kcols[r["status"]].addItem(it)
 
     def refresh_eisen(self):
         for w in self.ecols.values(): w.clear()
-        for r in tasks(self.project_filter):
+        for r in tasks(self.project_filter, self.search.text(), self.pfilter.currentData(), self.sfilter.currentText(), self.dfilter.currentText()):
             it = QListWidgetItem(f"{r['title']}\n{self.fmt(r['due_date'])}"); it.setData(Qt.UserRole, r["id"]); self.ecols[r["priority"]].addItem(it)
 
     def refresh_plan(self):
         for w in self.pcols.values(): w.clear()
         today = date.today(); end = today + timedelta(days=6 - today.weekday())
-        for r in tasks(self.project_filter):
+        for r in tasks(self.project_filter, self.search.text(), self.pfilter.currentData(), self.sfilter.currentText(), self.dfilter.currentText()):
             if not r["due_date"]: g = "Später"
             else:
                 d = datetime.strptime(r["due_date"], "%Y-%m-%d").date(); g = "Heute" if d == today else ("Diese Woche" if d <= end else "Später")
@@ -606,10 +627,10 @@ class MainWindow(QMainWindow):
     def drop_moved(self, tid, target):
         if target in STATUS: self.set_status(tid, target)
         elif target in PRIORITIES:
-            update_priority(tid, target); self.refresh_all(); self.undo_button.setEnabled(True)
+            update_priority(tid, target); self.refresh_all(); self._set_undo_available()
         else:
             due = date.today().isoformat() if target == "Heute" else ((date.today() + timedelta(days=2)).isoformat() if target == "Diese Woche" else None)
-            update_due(tid, due); self.refresh_all(); self.undo_button.setEnabled(True)
+            update_due(tid, due); self.refresh_all(); self._set_undo_available()
 
     def task_menu(self, pos):
         it = self.table.itemAt(pos)
@@ -639,6 +660,8 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Export", f"Der Export konnte nicht erstellt werden.\n\n{e}")
 
     def refresh_all(self):
+        if getattr(self, "scope", "Alle") == "Erledigt" and self.sfilter.currentText() != "Erledigt":
+            self.scope = "Alle"
         self.refresh_projects(); self.refresh_tasks(); self.refresh_kanban(); self.refresh_eisen(); self.refresh_plan()
         if hasattr(self, "overview_labels"):
             all_rows = tasks()

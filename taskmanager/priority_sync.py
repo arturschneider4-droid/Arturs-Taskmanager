@@ -20,48 +20,8 @@ _original_edit_task = MainWindow.edit_task
 
 
 def _synced_editor_priority(self, key):
-    previous = getattr(self, "editor_priority", None)
+    # Editor choices are drafts until the user presses Save.
     _original_editor_priority(self, key)
-
-    tid = getattr(self, "editor_task_id", None)
-    if not tid or previous == key:
-        return
-
-    current = task(tid)
-    if not current or current["priority"] == key:
-        return
-
-    backup_db("before_priority_change")
-    update_priority(tid, key)
-    self.selected_task = tid
-
-    if hasattr(self, "table"):
-        for row in range(self.table.rowCount()):
-            item = self.table.item(row, 1)
-            if item and item.data(Qt.UserRole) == tid:
-                cell = QWidget()
-                layout = QHBoxLayout(cell)
-                layout.setContentsMargins(4, 0, 4, 0)
-                light = TrafficLight(key)
-                light.setToolTip(PRIORITIES[key])
-                layout.addWidget(light)
-                cell.mousePressEvent = lambda _event, task_id=tid: self.cycle_priority(task_id)
-                self.table.setCellWidget(row, 3, cell)
-                break
-
-    if hasattr(self, "kcols"):
-        self.refresh_kanban()
-    if hasattr(self, "ecols"):
-        self.refresh_eisen()
-    if hasattr(self, "pcols"):
-        self.refresh_plan()
-
-    if hasattr(self, "_set_undo_available"):
-        self._set_undo_available()
-    elif hasattr(self, "undo_button"):
-        self.undo_button.setEnabled(True)
-    if hasattr(self, "statusBar"):
-        self.statusBar().showMessage("Priorität gespeichert", 1800)
 
 
 def _sync_due_visuals(self):

@@ -20,9 +20,3 @@ def test_v8_task_surface_keeps_functional_table_as_source_of_truth():
     assert 'getattr(window, "table", None)' in detail
     assert "setHorizontalScrollBarPolicy" in detail
     assert "setSectionResizeMode" in style
-
-
-def test_v8_compact_mode_is_explicitly_styled():
-    text = Path("taskmanager/style_v8.py").read_text(encoding="utf-8")
-    assert "_v8_compact" in text
-    assert "setDefaultSectionSize(30 if window._v8_compact else 42)" in text

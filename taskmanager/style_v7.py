@@ -293,6 +293,11 @@ def rebuild_professional_shell(window):
     body_lay.addWidget(workspace, 1); outer.addWidget(body, 1)
     editor = getattr(window, "editor", None)
     if editor is not None: editor.setObjectName("v7Detail")
+    # Retain legacy controls used by navigation/refresh callbacks until window teardown.
+    legacy = window.takeCentralWidget()
+    if legacy is not None:
+        legacy.setParent(window)
+        legacy.hide()
     window.setCentralWidget(root)
     window.setMinimumSize(1080, 760)
     _configure_task_table(window)
