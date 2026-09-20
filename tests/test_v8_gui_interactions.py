@@ -202,3 +202,94 @@ def test_removing_scope_due_chip_resets_scope_state(v8_window):
     assert window.scope == "Alle"
     all_scope = next(button for key, button in window._v8_scopes if key == "Alle")
     assert all_scope.property("active") == "true"
+
+
+def test_completed_scope_filters_completed_tasks(v8_window):
+    window = v8_window
+    completed_id = db.save(
+        {
+            "title": "Erledigte Aufgabe",
+            "description": "",
+            "project_id": None,
+            "priority": "important_not_urgent",
+            "due_date": None,
+            "status": "Erledigt",
+            "recurrence": "none",
+            "subtasks": [],
+        },
+        make_backup=False,
+    )
+    db.save(
+        {
+            "title": "Offene Aufgabe",
+            "description": "",
+            "project_id": None,
+            "priority": "important_not_urgent",
+            "due_date": None,
+            "status": "Offen",
+            "recurrence": "none",
+            "subtasks": [],
+        },
+        make_backup=False,
+    )
+
+    window.set_scope("Erledigt")
+    QApplication.processEvents()
+
+    visible_ids = [
+        window.table.item(row, 1).data(Qt.UserRole)
+        for row in range(window.table.rowCount())
+    ]
+    assert visible_ids == [completed_id]
+    assert window.sfilter.currentText() == "Erledigt"
+
+    window.set_scope("Alle")
+    QApplication.processEvents()
+
+    visible_ids = {
+        window.table.item(row, 1).data(Qt.UserRole)
+        for row in range(window.table.rowCount())
+    }
+    assert visible_ids == {completed_id, completed_id + 1}
+    assert window.sfilter.currentText() == "Alle Status"
+
+
+@pytest.mark.parametrize("view_key,lane_attribute", [
+    ("kanban", "kcols"),
+    ("eisenhower", "ecols"),
+    ("planning", "pcols"),
+])
+def test_board_selection_opens_and_synchronizes_detail_panel(
+    v8_window, view_key, lane_attribute
+):
+    window = v8_window
+    task_id = db.save(
+        {
+            "title": "Auswahltest",
+            "description": "",
+            "project_id": None,
+            "priority": "important_urgent",
+            "due_date": None,
+            "status": "Offen",
+            "recurrence": "none",
+            "subtasks": [],
+        },
+        make_backup=False,
+    )
+    window.refresh_all()
+    window.set_view(view_key)
+    panel = window._v8_detail_panel
+    panel.set_panel_open(False)
+    lanes = getattr(window, lane_attribute)
+    lane = next(widget for widget in lanes.values() if widget.count())
+    item = lane.item(0)
+
+    lane.setCurrentItem(item)
+    lane.itemClicked.emit(item)
+    QApplication.processEvents()
+
+    assert item.data(Qt.UserRole) == task_id
+    assert window.selected_task == task_id
+    assert window.editor_task_id == task_id
+    assert panel.task_id == task_id
+    assert panel.panel_open is True

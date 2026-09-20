@@ -398,7 +398,16 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Rückgängig", f"Die Wiederherstellung ist fehlgeschlagen.\n\n{e}")
 
     def make_list(self, mode):
-        w = DropList(mode); w.moved.connect(self.drop_moved); w.itemClicked.connect(lambda i: self.select_task(i.data(Qt.UserRole))); w.itemDoubleClicked.connect(lambda i: self.edit_task(i.data(Qt.UserRole))); return w
+        def select_list_task(item):
+            tid = item.data(Qt.UserRole)
+            panel = getattr(self, "_v8_detail_panel", None)
+            if panel is None:
+                self.select_task(tid)
+                return
+            panel.set_task_id(tid)
+            panel.set_panel_open(True)
+
+        w = DropList(mode); w.moved.connect(self.drop_moved); w.itemClicked.connect(select_list_task); w.itemDoubleClicked.connect(lambda i: self.edit_task(i.data(Qt.UserRole))); return w
 
     def kanban_page(self):
         p = QWidget(); l = QHBoxLayout(p); l.setContentsMargins(0, 0, 0, 0); self.kcols = {}
@@ -428,7 +437,12 @@ class MainWindow(QMainWindow):
     def set_scope(self, scope):
         self.scope = scope
         mapping = {"Heute": "Heute", "Diese Woche": "Diese Woche", "Später": "Später", "Alle": "Alle Fälligkeiten"}
-        self.dfilter.setCurrentText(mapping[scope])
+        if scope == "Erledigt":
+            self.dfilter.setCurrentText("Alle Fälligkeiten")
+            self.sfilter.setCurrentText("Erledigt")
+        else:
+            self.sfilter.setCurrentText("Alle Status")
+            self.dfilter.setCurrentText(mapping[scope])
         for k, b in self.scope_buttons.items():
             b.setProperty("active", str(k == scope).lower()); b.style().unpolish(b); b.style().polish(b)
         self.refresh_all()
