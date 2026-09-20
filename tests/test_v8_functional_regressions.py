@@ -86,14 +86,14 @@ def test_table_status_change_does_not_get_overwritten_by_editor_save(production_
 
 
 def test_navigation_after_deferred_widget_deletion(production_window):
-    from PySide6.QtCore import QCoreApplication, QEvent
-    from PySide6.QtWidgets import QLabel
+    from PySide6.QtWidgets import QApplication, QLabel
     from taskmanager.style_v8 import _navigate
     w = production_window
     for _ in range(3):
         for key, expected in [('kanban', 'Kanban'), ('eisenhower', 'Eisenhower-Matrix'), ('planning', 'Planung'), ('tasks', 'Aufgaben')]:
-            QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+            QApplication.processEvents()
             _navigate(w, key)
+            QApplication.processEvents()
             assert w.findChild(QLabel, 'v8HeaderTitle').text() == expected
             assert next(b for k,b in w._v8_nav_items if k == key).isChecked()
             w.refresh_all()
