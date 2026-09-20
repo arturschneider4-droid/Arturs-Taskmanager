@@ -38,7 +38,6 @@ def v8_window(tmp_path: Path, monkeypatch):
     window.close()
     window.deleteLater()
     app.processEvents()
-    app.quit()
 
 
 def test_v8_navigation_buttons_change_view(v8_window):
