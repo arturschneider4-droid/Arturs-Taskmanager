@@ -2,7 +2,8 @@ from PySide6.QtCore import QObject, QEvent, Qt, QTimer
 from PySide6.QtWidgets import QHeaderView, QAbstractItemView, QSizePolicy, QCheckBox
 
 
-TASK_FIXED_WIDTHS = {0: 32, 2: 172, 3: 95, 4: 100, 5: 100, 6: 50}
+TASK_FIXED_WIDTHS = {0: 32, 3: 95, 4: 100, 6: 50}
+TASK_BADGE_MIN_WIDTHS = {2: 172, 5: 100}
 TASK_LEFT_MIN_WIDTH = 600
 EDITOR_MIN_WIDTH = 300
 EDITOR_MAX_WIDTH = 400
@@ -24,6 +25,20 @@ def _bound_embedded_task_controls(table):
                 layout.setContentsMargins(0, 0, 0, 0)
                 layout.setSpacing(0)
             widget.updateGeometry()
+
+
+def _fit_badge_columns(table):
+    """Size text badges from the active platform's actual font metrics."""
+    header = table.horizontalHeader()
+    for column, minimum in TASK_BADGE_MIN_WIDTHS.items():
+        width = minimum
+        for row in range(table.rowCount()):
+            widget = table.cellWidget(row, column)
+            if widget is not None:
+                width = max(width, widget.minimumSizeHint().width() + 2)
+                widget.setMaximumWidth(16777215)
+        header.setSectionResizeMode(column, QHeaderView.Fixed)
+        table.setColumnWidth(column, width)
 
 
 def _install_task_checkbox_controller(controller):
@@ -48,6 +63,7 @@ def _install_task_checkbox_controller(controller):
 def _schedule_responsive_refresh(controller):
     QTimer.singleShot(0, lambda: (
         _bound_embedded_task_controls(controller.table),
+        _fit_badge_columns(controller.table),
         _install_task_checkbox_controller(controller),
     ))
 
@@ -71,6 +87,9 @@ def configure_responsive_task_area(window):
     header.setSectionResizeMode(0, QHeaderView.Fixed)
     header.setSectionResizeMode(1, QHeaderView.Stretch)
     for column, width in TASK_FIXED_WIDTHS.items():
+        header.setSectionResizeMode(column, QHeaderView.Fixed)
+        table.setColumnWidth(column, width)
+    for column, width in TASK_BADGE_MIN_WIDTHS.items():
         header.setSectionResizeMode(column, QHeaderView.Fixed)
         table.setColumnWidth(column, width)
 

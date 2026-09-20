@@ -597,6 +597,20 @@ class MainWindow(QMainWindow):
             self.table.setItem(i, 4, due)
             sb = StatusBadge(r["status"]); sb.mousePressEvent = lambda _e, tid=r["id"]: self.toggle_task(tid); self.table.setCellWidget(i, 5, sb)
             more = QPushButton("•••"); more.setObjectName("soft"); more.setFixedWidth(42); more.clicked.connect(lambda _, tid=r["id"]: self.open_task_actions(tid)); self.table.setCellWidget(i, 6, more)
+        # Font metrics vary by Qt backend. Size badge columns from their real
+        # widgets instead of assuming that one pixel width fits every OS.
+        header = self.table.horizontalHeader()
+        for column, default_width in ((2, 172), (5, 100)):
+            width = max(
+                [default_width]
+                + [
+                    self.table.cellWidget(row, column).minimumSizeHint().width() + 2
+                    for row in range(self.table.rowCount())
+                    if self.table.cellWidget(row, column) is not None
+                ]
+            )
+            header.setSectionResizeMode(column, QHeaderView.Fixed)
+            self.table.setColumnWidth(column, width)
         # Refreshing a view must not overwrite an in-progress editor draft.
 
     def open_task_actions(self, tid):
