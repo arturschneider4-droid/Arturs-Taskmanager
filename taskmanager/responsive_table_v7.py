@@ -2,7 +2,7 @@ from PySide6.QtCore import QObject, QEvent, Qt, QTimer
 from PySide6.QtWidgets import QHeaderView, QAbstractItemView, QSizePolicy, QCheckBox
 
 
-TASK_FIXED_WIDTHS = {0: 32, 2: 100, 3: 95, 4: 100, 5: 85, 6: 50}
+TASK_FIXED_WIDTHS = {0: 32, 2: 172, 3: 95, 4: 100, 5: 100, 6: 50}
 TASK_LEFT_MIN_WIDTH = 600
 EDITOR_MIN_WIDTH = 300
 EDITOR_MAX_WIDTH = 400

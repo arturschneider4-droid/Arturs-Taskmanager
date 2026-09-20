@@ -35,6 +35,7 @@ def _install_v8_secondary_actions(window):
     settings.setObjectName("v8Tool")
     settings.clicked.connect(lambda: QMessageBox.information(window, "Einstellungen", "Lokale Datenbank · Offline-Betrieb · Excel-Export"))
     layout.addWidget(settings)
+    window._v8_secondary_actions = (export, settings)
     window._v8_secondary_installed = True
 
 

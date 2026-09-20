@@ -5,11 +5,12 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QPushButton, QToolButton
+from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QToolButton
 
 import taskmanager.db as db
 import taskmanager.ui as ui
 import taskmanager.style_v8 as style_v8
+from taskmanager.app import _install_v8_secondary_actions
 from taskmanager.style_v8 import rebuild_v8_shell
 
 
@@ -101,6 +102,63 @@ def test_v8_toolbar_and_responsive_controls_change_state(v8_window):
     assert window._v8_nav.width() == 228
     collapse.click()
     assert window._v8_nav.width() == 60
+
+
+def test_collapsed_navigation_hides_secondary_labels_and_footer(v8_window):
+    window = v8_window
+    _install_v8_secondary_actions(window)
+    collapse = window._v8_nav.findChild(QToolButton)
+    secondary = [
+        button
+        for button in window._v8_nav.findChildren(QPushButton)
+        if button.text() in {"Export / Berichte", "Einstellungen"}
+    ]
+    assert len(secondary) == 2
+
+    collapse.click()
+    QApplication.processEvents()
+
+    assert all(button.isHidden() for button in secondary)
+    assert window._v8_nav.findChild(QLabel, "v8NavFooter").isHidden()
+    assert all(
+        label.isHidden()
+        for label in window._v8_nav.findChildren(QLabel, "v8NavHeader")
+    )
+
+
+def test_task_badges_are_not_clipped_with_open_detail_panel(v8_window):
+    window = v8_window
+    connection = db.connect()
+    project_id = connection.execute(
+        "INSERT INTO projects(name) VALUES (?)", ("Vertrieb & Kunden",)
+    ).lastrowid
+    connection.commit()
+    connection.close()
+    db.save(
+        {
+            "title": "Ausführlicher Aufgabentitel",
+            "description": "",
+            "project_id": project_id,
+            "priority": "important_not_urgent",
+            "due_date": None,
+            "status": "In Arbeit",
+            "recurrence": "none",
+            "subtasks": [],
+        },
+        make_backup=False,
+    )
+    window.setStyleSheet(style_v8.V8_STYLE)
+    window.resize(1440, 900)
+    window.show()
+    window.refresh_all()
+    QApplication.processEvents()
+
+    theme = window.table.cellWidget(0, 2)
+    status = window.table.cellWidget(0, 5)
+    assert theme.text() == "Vertrieb & Kunden"
+    assert theme.width() >= theme.minimumSizeHint().width()
+    assert status.text() == "In Arbeit"
+    assert status.width() >= status.minimumSizeHint().width()
 
 
 def test_v8_detail_toggle_tracks_requested_state_while_responsive_layout_hides_panel(v8_window):

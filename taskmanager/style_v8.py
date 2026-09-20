@@ -89,7 +89,14 @@ def _toggle_navigation(window):
     window._v8_nav.setFixedWidth(60 if collapsed else 228)
     for _, button in window._v8_nav_items:
         button.setText(button._v8_icon if collapsed else button._v8_full_text)
-    window._v8_nav_header.setVisible(not collapsed); window._v8_theme_label.setVisible(not collapsed); window._v8_themes.setVisible(not collapsed); window._v8_theme_add.setVisible(not collapsed)
+    for label in window._v8_nav.findChildren(QLabel, "v8NavHeader"):
+        label.setVisible(not collapsed)
+    window._v8_themes.setVisible(not collapsed); window._v8_theme_add.setVisible(not collapsed)
+    for button in getattr(window, "_v8_secondary_actions", ()):
+        button.setVisible(not collapsed)
+    footer = getattr(window, "_v8_nav_footer", None)
+    if footer is not None:
+        footer.setVisible(not collapsed)
 
 
 def _toggle_detail(window):
@@ -270,7 +277,7 @@ def _build_navigation(window, root_layout):
     div2 = QFrame(); div2.setObjectName("v8Divider"); layout.addWidget(div2); theme_label = QLabel("THEMENGEBIETE"); theme_label.setObjectName("v8NavHeader"); layout.addWidget(theme_label); window._v8_theme_label = theme_label
     themes = QListWidget(); themes.setObjectName("v8Themes"); themes.setMaximumHeight(210); themes.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection); themes.setFocusPolicy(Qt.StrongFocus); themes.setEnabled(True); themes.setMouseTracking(True); layout.addWidget(themes,1); window._v8_themes = themes
     add_theme = QPushButton("＋  Neues Themengebiet"); add_theme.setObjectName("v8Tool"); add_theme.clicked.connect(window.new_project); layout.addWidget(add_theme); window._v8_theme_add = add_theme
-    footer = QLabel("Lokal · Offline"); footer.setObjectName("v8NavFooter"); layout.addWidget(footer); window._v8_nav = nav; root_layout.addWidget(nav)
+    footer = QLabel("Lokal · Offline"); footer.setObjectName("v8NavFooter"); layout.addWidget(footer); window._v8_nav_footer = footer; window._v8_nav = nav; root_layout.addWidget(nav)
     def select_theme(item):
         if item is None: return
         pid = item.data(Qt.UserRole)
@@ -306,7 +313,7 @@ def _install_task_surface(window, workspace_layout):
     if table is not None:
         table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff); table.setWordWrap(False); table.verticalHeader().setDefaultSectionSize(42); table.setTextElideMode(Qt.ElideRight)
         header = table.horizontalHeader(); header.setStretchLastSection(False); header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed); header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        for col, width in {2:118,3:88,4:96,5:84,6:34}.items(): header.setSectionResizeMode(col, QHeaderView.ResizeMode.Fixed); table.setColumnWidth(col, width)
+        for col, width in {2:172,3:88,4:96,5:100,6:34}.items(): header.setSectionResizeMode(col, QHeaderView.ResizeMode.Fixed); table.setColumnWidth(col, width)
     editor = getattr(window, "editor", None)
     if editor is not None:
         editor.setObjectName("v8Inspector"); editor.setMinimumWidth(320); editor.setMaximumWidth(650); editor.setVisible(False)
