@@ -64,7 +64,7 @@ def production_window(tmp_path,monkeypatch):
     window=configure_main_window(MainWindow())
     window.resize(1440,900);window.show();app.processEvents()
     yield window
-    window.close();window.deleteLater();app.processEvents()
+    window.close()
 
 def test_resize_retains_selection_and_unsaved_draft(production_window):
     w=production_window

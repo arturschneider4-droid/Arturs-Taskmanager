@@ -26,5 +26,5 @@ for iteration in range(3):
   w.global_search.setText('Nichts');ck('visible_search_excludes_task',w.table.rowCount()==0)
   w.global_search.clear();w.e_title.setFocus()
   action=next(x for x in w.actions() if x.shortcut().toString()=='Ctrl+F');action.trigger();app.processEvents();ck('search_shortcut_focuses_visible_field',w.global_search.hasFocus())
- finally:w.close();w.deleteLater();app.processEvents()
+ finally:w.close()
 print(json.dumps(out,indent=2))

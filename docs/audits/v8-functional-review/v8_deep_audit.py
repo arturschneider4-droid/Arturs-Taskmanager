@@ -60,6 +60,6 @@ def run(repeat):
    w.export_excel()
   wb=load_workbook(root/'export.xlsx');check('excel_export',wb.active.max_row==2);wb.close()
   check('database_integrity',db.connect().execute('PRAGMA integrity_check').fetchone()[0]=='ok')
- finally:w.close();w.deleteLater();app.processEvents()
+ finally:w.close()
 for i in range(3):run(i+1)
 print(json.dumps(results,ensure_ascii=False,indent=2));print('SUMMARY',len(results),sum(x['passed'] for x in results))
