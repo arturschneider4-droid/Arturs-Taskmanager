@@ -18,3 +18,8 @@ def test_final_release_packages_excel_support_and_versioned_zip():
     assert "--collect-submodules openpyxl" in workflow
     assert "ArtursTaskmanager-V9.2-Windows.zip" in workflow
     assert "name: ArtursTaskmanager-V9.2-Windows" in workflow
+
+
+def test_windows_ci_preserves_pytest_result_without_unstable_qt_teardown():
+    workflow = Path(".github/workflows/build-windows.yml").read_text(encoding="utf-8")
+    assert "os._exit(code)" in workflow
