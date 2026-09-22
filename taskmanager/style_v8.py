@@ -367,7 +367,16 @@ def rebuild_v8_shell(window):
     if legacy is not None:
         legacy.setParent(window)
         legacy.hide()
-    window.setCentralWidget(root); window._v8_workspace = workspace; window._v8_shell = root; window._v8_nav_collapsed = False; window._v8_group = "Keine Gruppierung"; _style_existing_widgets(window); _sync_active_nav(window,"tasks"); install_v8_kanban(window); install_v8_eisenhower(window); install_v8_planning(window); QTimer.singleShot(0, lambda: _v8_refresh(window)); return root
+    window.setCentralWidget(root)
+    # Some legacy model controls remain invisible in V8 but are still used by
+    # refresh callbacks. Keep them in Qt's ownership tree so their native
+    # objects cannot be collected between event-loop turns (notably on Windows).
+    for name in persistent:
+        widget = getattr(window, name, None)
+        if widget is not None and widget.parentWidget() is None:
+            widget.setParent(root)
+            widget.hide()
+    window._v8_workspace = workspace; window._v8_shell = root; window._v8_nav_collapsed = False; window._v8_group = "Keine Gruppierung"; _style_existing_widgets(window); _sync_active_nav(window,"tasks"); install_v8_kanban(window); install_v8_eisenhower(window); install_v8_planning(window); QTimer.singleShot(0, lambda: _v8_refresh(window)); return root
 
 
 def _v8_refresh(window):

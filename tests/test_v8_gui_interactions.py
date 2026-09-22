@@ -56,6 +56,12 @@ def test_v8_navigation_buttons_change_view(v8_window):
     assert buttons["Aufgaben"].isChecked()
 
 
+def test_v8_retains_hidden_legacy_controls_under_the_window(v8_window):
+    window = v8_window
+    assert window.projects.parentWidget() is not None
+    assert window.project_search.parentWidget() is not None
+
+
 def test_v8_theme_selection_updates_project_and_returns_to_tasks(v8_window):
     window = v8_window
     assert window._v8_themes.count() == 1
