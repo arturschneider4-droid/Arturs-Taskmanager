@@ -34,7 +34,7 @@ jobs:
 
       - name: Run tests
         shell: pwsh
-        run: python -c "import os, pytest; code = pytest.main(['-q']); os._exit(code)"
+        run: python -c "import os, pytest; code = pytest.main(['-q']); print(f'PYTEST_EXIT_CODE={int(code)}', flush=True); os._exit(int(code))"
 
       - name: Build EXE
         shell: pwsh
