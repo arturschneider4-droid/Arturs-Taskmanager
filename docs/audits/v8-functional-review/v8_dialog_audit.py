@@ -1,9 +1,9 @@
 exec(open(__import__('pathlib').Path(__file__).with_name('v8_deep_audit.py')).read().split('for i in range(3):run(i+1)')[0].split('def run(repeat):')[0])
 from taskmanager.dialogs import TaskDialog,ProjectDialog
 from PySide6.QtWidgets import QDialog
-out=[]
+out=[];windows=[]
 for iteration in range(3):
- root=Path(tempfile.mkdtemp());db.APP_DIR=root;db.DB_PATH=root/'db';db.BACKUP_DIR=root/'b';db.init_db();w=configure_main_window(MainWindow());w.show();app.processEvents()
+ root=Path(tempfile.mkdtemp());db.APP_DIR=root;db.DB_PATH=root/'db';db.BACKUP_DIR=root/'b';db.init_db();w=configure_main_window(MainWindow());windows.append(w);w.show();app.processEvents()
  def ck(name,ok):out.append((iteration+1,name,bool(ok)))
  try:
   def project_exec(d):d.edit.setText('Gebiet');return QDialog.Accepted

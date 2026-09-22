@@ -10,10 +10,10 @@ import taskmanager.db as db
 from taskmanager.ui import MainWindow
 from taskmanager.app import configure_main_window
 from taskmanager import style_v8
-app=QApplication([]);results=[]
+app=QApplication([]);results=[];windows=[]
 def run(repeat):
  root=Path(tempfile.mkdtemp());db.APP_DIR=root;db.DB_PATH=root/'db';db.BACKUP_DIR=root/'backups';db.init_db()
- w=configure_main_window(MainWindow());w.resize(1440,900);w.show();app.processEvents()
+ w=configure_main_window(MainWindow());windows.append(w);w.resize(1440,900);w.show();app.processEvents()
  def check(name,ok,detail=''):results.append(dict(run=repeat,test=name,passed=bool(ok),detail=detail))
  def seed(title='Basis',due=None,status='Offen',priority='important_urgent',pid=None):return db.save(dict(title=title,description='Beschreibung',project_id=pid,priority=priority,due_date=due,status=status,recurrence='weekly',subtasks=[('Teil',True)]),make_backup=False)
  def reset():
