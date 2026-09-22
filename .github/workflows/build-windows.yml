@@ -34,7 +34,7 @@ jobs:
 
       - name: Run tests
         shell: pwsh
-        run: python -c "import os, pytest; code = pytest.main(['-q']); print(f'PYTEST_EXIT_CODE={int(code)}', flush=True); os._exit(int(code))"
+        run: python -c "import ctypes, pytest; code = int(pytest.main(['-q'])); print(f'PYTEST_EXIT_CODE={code}', flush=True); ctypes.windll.kernel32.TerminateProcess(ctypes.windll.kernel32.GetCurrentProcess(), code)"
 
       - name: Build EXE
         shell: pwsh

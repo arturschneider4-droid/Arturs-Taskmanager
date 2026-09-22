@@ -22,4 +22,5 @@ def test_final_release_packages_excel_support_and_versioned_zip():
 
 def test_windows_ci_preserves_pytest_result_without_unstable_qt_teardown():
     workflow = Path(".github/workflows/build-windows.yml").read_text(encoding="utf-8")
-    assert "os._exit(int(code))" in workflow
+    assert "TerminateProcess" in workflow
+    assert "PYTEST_EXIT_CODE={code}" in workflow
