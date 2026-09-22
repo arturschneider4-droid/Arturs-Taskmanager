@@ -35,7 +35,7 @@ def test_v8_refresh_reapplies_all_presentation_layers():
 
 def test_v8_release_candidate_keeps_version_8_startup():
     text = Path("taskmanager/app.py").read_text(encoding="utf-8")
-    assert 'VERSION = "9.1"' in text
+    assert 'VERSION = "9.2"' in text
     assert "rebuild_professional_shell" in text
     assert "rebuild_v8_shell" in text
 

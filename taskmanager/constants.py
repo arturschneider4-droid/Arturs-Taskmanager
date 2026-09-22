@@ -37,7 +37,7 @@ PRIORITY_LIGHTS={
 # Current reference UI specification (kept independent from Qt so it can be tested offline).
 UI_SPEC = {
     "brand": "Arturs Taskmanager",
-    "version": "V9.1",
+    "version": "V9.2",
     "sidebar_width": 238,
     "sidebar_section_spacing": 12,
     "theme_item_height": 40,

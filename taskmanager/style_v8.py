@@ -217,6 +217,7 @@ def _install_filter_chips(window, parent_layout):
     layout.setContentsMargins(0, 0, 0, 0)
     layout.setSpacing(6)
     window._v8_filter_chips = container
+    window._v8_refresh_filter_chips = lambda: _refresh_filter_chips(window)
     parent_layout.addWidget(container)
     for name in ("pfilter", "sfilter", "dfilter", "theme_filter"):
         widget = getattr(window, name, None)
@@ -353,7 +354,7 @@ def rebuild_v8_shell(window):
                 widget.setParent(None)
         old.hide()
     root = QWidget(); root.setObjectName("v8Shell"); outer = QVBoxLayout(root); outer.setContentsMargins(0,0,0,0); outer.setSpacing(0)
-    top = QFrame(); top.setObjectName("v8Topbar"); top.setFixedHeight(52); tl = QHBoxLayout(top); tl.setContentsMargins(14,7,14,7); brand = QLabel("Arturs Taskmanager"); brand.setObjectName("v8Brand"); tl.addWidget(brand); version = QLabel("V9.1"); version.setObjectName("v8Meta"); tl.addWidget(version); offline = QLabel("● Lokal · Offline"); offline.setObjectName("v8Meta"); tl.addWidget(offline); tl.addStretch()
+    top = QFrame(); top.setObjectName("v8Topbar"); top.setFixedHeight(52); tl = QHBoxLayout(top); tl.setContentsMargins(14,7,14,7); brand = QLabel("Arturs Taskmanager"); brand.setObjectName("v8Brand"); tl.addWidget(brand); version = QLabel("V9.2"); version.setObjectName("v8Meta"); tl.addWidget(version); offline = QLabel("● Lokal · Offline"); offline.setObjectName("v8Meta"); tl.addWidget(offline); tl.addStretch()
     search = getattr(window, "global_search", None)
     if search is not None: search.setMaximumWidth(280); search.setPlaceholderText("Suche  ·  Strg + F"); tl.addWidget(search)
     undo = getattr(window, "undo_button", None)

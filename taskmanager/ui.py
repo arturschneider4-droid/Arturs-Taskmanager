@@ -446,16 +446,25 @@ class MainWindow(QMainWindow):
     def set_scope(self, scope):
         self.scope = scope
         mapping = {"Heute": "Heute", "Diese Woche": "Diese Woche", "Später": "Später", "Alle": "Alle Fälligkeiten"}
-        if scope == "Erledigt":
-            self.dfilter.setCurrentText("Alle Fälligkeiten")
-            self.sfilter.setCurrentText("Erledigt")
-        else:
-            self.sfilter.setCurrentText("Alle Status")
-            self.dfilter.setCurrentText(mapping[scope])
+        status_was_blocked = self.sfilter.blockSignals(True)
+        due_was_blocked = self.dfilter.blockSignals(True)
+        try:
+            if scope == "Erledigt":
+                self.dfilter.setCurrentText("Alle Fälligkeiten")
+                self.sfilter.setCurrentText("Erledigt")
+            else:
+                self.sfilter.setCurrentText("Alle Status")
+                self.dfilter.setCurrentText(mapping[scope])
+        finally:
+            self.sfilter.blockSignals(status_was_blocked)
+            self.dfilter.blockSignals(due_was_blocked)
         self.scope = scope
         for k, b in self.scope_buttons.items():
             b.setProperty("active", str(k == scope).lower()); b.style().unpolish(b); b.style().polish(b)
         self.refresh_all()
+        refresh_filter_chips = getattr(self, "_v8_refresh_filter_chips", None)
+        if callable(refresh_filter_chips):
+            refresh_filter_chips()
 
     def cycle_sort(self):
         self.sort_mode = (self.sort_mode + 1) % 3
