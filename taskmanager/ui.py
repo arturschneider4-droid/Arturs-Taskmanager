@@ -584,12 +584,14 @@ class MainWindow(QMainWindow):
         if self.sort_mode == 1: rows = sorted(rows, key=lambda r: (r["due_date"] is None, r["due_date"] or ""))
         elif self.sort_mode == 2: rows = sorted(rows, key=lambda r: r["title"].lower())
         self.count.setText(f"{len(rows)} Aufgaben")
-        self.table.setRowCount(0)
-        for r in rows:
-            i = self.table.rowCount(); self.table.insertRow(i); self.table.setRowHeight(i, 30 if getattr(self, "_v8_compact", False) else 52)
+        self.table.clearContents()
+        self.table.setRowCount(len(rows))
+        for i, r in enumerate(rows):
+            self.table.setRowHeight(i, 30 if getattr(self, "_v8_compact", False) else 52)
             cb = QCheckBox(); cb.setChecked(r["status"] == "Erledigt"); cb.setToolTip("Aufgabe als erledigt markieren"); cb.stateChanged.connect(lambda state, tid=r["id"]: self.set_status(tid, "Erledigt" if state == Qt.Checked.value else "Offen")); cell = QWidget(); cl = QHBoxLayout(cell); cl.setContentsMargins(8, 0, 0, 0); cl.addWidget(cb); self.table.setCellWidget(i, 0, cell)
-            ss = subs(r["id"]); done = sum(bool(x["done"]) for x in ss)
-            it = QTableWidgetItem(f"{r['title']}\nUnteraufgaben: {done} / {len(ss)}" if ss else r["title"]); it.setData(Qt.UserRole, r["id"]); font = it.font(); font.setWeight(QFont.DemiBold); it.setFont(font); self.table.setItem(i, 1, it)
+            subtask_count = r["subtask_count"]
+            subtask_done = r["subtask_done"]
+            it = QTableWidgetItem(f"{r['title']}\nUnteraufgaben: {subtask_done} / {subtask_count}" if subtask_count else r["title"]); it.setData(Qt.UserRole, r["id"]); font = it.font(); font.setWeight(QFont.DemiBold); it.setFont(font); self.table.setItem(i, 1, it)
             self.table.setCellWidget(i, 2, ThemeBadge(r["project_name"]))
             pr = QWidget(); pl = QHBoxLayout(pr); pl.setContentsMargins(4, 0, 4, 0); light = TrafficLight(r["priority"]); light.setToolTip(PRIORITIES[r["priority"]]); pl.addWidget(light); pr.mousePressEvent = lambda _e, tid=r["id"]: self.cycle_priority(tid); self.table.setCellWidget(i, 3, pr)
             due = DueDateItem(self.fmt(r["due_date"])); due.setData(Qt.UserRole, r["due_date"] or "9999-12-31");

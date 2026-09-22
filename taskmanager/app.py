@@ -13,7 +13,7 @@ from .workspace_interactions_v7 import apply_workspace_interaction_fixes
 from .v8_interactions import install_drop_guard
 from .style_v8 import V8_STYLE, rebuild_v8_shell, install_v8_responsive_behavior
 
-VERSION = "9.0"
+VERSION = "9.1"
 V7_COMPATIBILITY_VERSION = "7.1"
 
 if not hasattr(QHeaderView, "Fixed"):

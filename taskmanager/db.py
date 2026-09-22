@@ -31,6 +31,7 @@ def init_db():
     CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
     CREATE INDEX IF NOT EXISTS idx_tasks_due ON tasks(due_date);
     CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+    CREATE INDEX IF NOT EXISTS idx_subtasks_task_id ON subtasks(task_id);
     """)
     cols = {x["name"] for x in c.execute("PRAGMA table_info(tasks)")}
     if "recurrence" not in cols:
@@ -148,7 +149,16 @@ def update_due(tid, due_date):
 
 
 def tasks(project=None,search="",priority=None,status="Alle Status",due="Alle Fälligkeiten"):
-    c=connect(); sql="SELECT t.*,p.name project_name FROM tasks t LEFT JOIN projects p ON p.id=t.project_id WHERE 1=1"; a=[]
+    c=connect(); sql="""SELECT t.*,p.name project_name,
+      COALESCE(sc.subtask_count, 0) subtask_count,
+      COALESCE(sc.subtask_done, 0) subtask_done
+      FROM tasks t
+      LEFT JOIN projects p ON p.id=t.project_id
+      LEFT JOIN (
+        SELECT task_id, COUNT(*) subtask_count, COALESCE(SUM(done), 0) subtask_done
+        FROM subtasks GROUP BY task_id
+      ) sc ON sc.task_id=t.id
+      WHERE 1=1"""; a=[]
     if project is not None: sql+=" AND t.project_id=?"; a.append(project)
     if search: sql+=" AND (LOWER(t.title) LIKE ? OR LOWER(t.description) LIKE ? OR EXISTS (SELECT 1 FROM subtasks s WHERE s.task_id=t.id AND LOWER(s.title) LIKE ?))"; q="%"+search.lower()+"%"; a += [q,q,q]
     if priority: sql+=" AND t.priority=?"; a.append(priority)
