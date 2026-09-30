@@ -1,4 +1,6 @@
 import sys
+import sqlite3
+from pathlib import Path
 from PySide6.QtWidgets import QApplication, QMessageBox, QPushButton, QHeaderView, QSplitter
 from .db import init_db, DB_PATH, backup_db, latest_backup
 from .ui import MainWindow, STYLE
@@ -12,8 +14,12 @@ from .editor_controls_v7 import configure_editor_subtask_controls
 from .workspace_interactions_v7 import apply_workspace_interaction_fixes
 from .v8_interactions import install_drop_guard
 from .style_v8 import V8_STYLE, rebuild_v8_shell, install_v8_responsive_behavior
+from .migrations import migrate_to_v10
+from .repositories import TaskRepository
+from .task_store import TaskStore
+from .v10_shell import V10Shell
 
-VERSION = "9.2"
+VERSION = "10.0"
 V7_COMPATIBILITY_VERSION = "7.1"
 
 if not hasattr(QHeaderView, "Fixed"):
@@ -102,15 +108,28 @@ def configure_main_window(window):
     return window
 
 
+def create_v10_window(db_path: Path = DB_PATH):
+    repository = TaskRepository(Path(db_path))
+    return V10Shell(TaskStore(repository))
+
+
+def _ensure_v10_schema():
+    connection = sqlite3.connect(DB_PATH)
+    columns = {row[1] for row in connection.execute("PRAGMA table_info(tasks)")}
+    connection.close()
+    if "planning_date" not in columns:
+        migrate_to_v10(DB_PATH, DB_PATH.parent / "backups")
+
+
 def main():
     init_db()
     if DB_PATH.exists() and DB_PATH.stat().st_size > 0:
         backup_db("startup")
     apply_priority_sync()
+    _ensure_v10_schema()
     a = QApplication(sys.argv)
     a.setStyle("Fusion")
-    a.setStyleSheet(STYLE + V63_STYLE + V64_STYLE + V7_STYLE + V8_STYLE)
-    w = configure_main_window(MainWindow())
+    w = create_v10_window()
     w.show()
     sys.exit(a.exec())
 

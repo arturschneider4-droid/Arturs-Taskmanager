@@ -5,8 +5,8 @@ from taskmanager import app
 from taskmanager.constants import UI_SPEC
 
 
-def test_v8_release_identity_and_undo_dependency_are_importable():
-    assert app.VERSION == "9.2"
+def test_v10_release_identity_and_undo_dependency_are_importable():
+    assert app.VERSION == "10.0"
     assert callable(app.latest_backup)
     assert "#v8" in app.V8_STYLE.lower()
 
@@ -18,7 +18,7 @@ def test_v8_startup_uses_a_resolved_latest_backup_function():
     assert app.latest_backup.__module__ == "taskmanager.db"
 
 
-def test_all_release_identity_surfaces_report_v8():
-    assert taskmanager.__version__ == "9.2"
-    assert UI_SPEC["version"] == "V9.2"
-    assert "## V9.2" in Path("README.md").read_text(encoding="utf-8")
+def test_v10_runtime_identity_and_release_surface_are_consistent():
+    assert taskmanager.__version__ == "10.0"
+    assert UI_SPEC["version"] == "V10.0"
+    assert "## V10.0" in Path("README.md").read_text(encoding="utf-8")

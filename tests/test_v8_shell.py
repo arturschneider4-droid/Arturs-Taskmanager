@@ -28,7 +28,7 @@ def test_app_wires_v8_shell():
     text = Path("taskmanager/app.py").read_text(encoding="utf-8")
     assert "style_v8" in text
     assert "rebuild_v8_shell" in text
-    assert 'VERSION = "9.2"' in text
+    assert 'VERSION = "10.0"' in text
 
 
 def test_v8_theme_navigation_items_are_actionable():

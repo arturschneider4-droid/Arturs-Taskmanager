@@ -2,7 +2,7 @@ name: Build Windows
 
 on:
   push:
-    branches: [ main, 'feature/v64-premium-enterprise', 'feature/v7-professional-desktop-ui', 'feature/v8-premium-enterprise-ui', 'release/v8.0-final', 'release/v9.0-test', 'release/v9.1-test', 'release/v9.2-test' ]
+    branches: [ main, 'release/v10.0-final' ]
   workflow_dispatch:
 
 permissions:
@@ -36,19 +36,23 @@ jobs:
         shell: pwsh
         run: python -c "import ctypes, pytest; code = int(pytest.main(['-q'])); print(f'PYTEST_EXIT_CODE={code}', flush=True); ctypes.windll.kernel32.TerminateProcess(ctypes.windll.kernel32.GetCurrentProcess(), code)"
 
+      - name: Run V10 main-workflow smoke test
+        shell: pwsh
+        run: python tests/v10/windows_smoke.py
+
       - name: Build EXE
         shell: pwsh
         run: |
-          pyinstaller --noconfirm --clean --windowed --name ArtursTaskmanager --collect-submodules taskmanager --collect-submodules openpyxl --hidden-import taskmanager.v8_kanban --hidden-import taskmanager.v8_eisenhower --hidden-import taskmanager.v8_planning main.py
+          pyinstaller --noconfirm --clean --windowed --name ArtursTaskmanager --collect-submodules taskmanager --collect-submodules openpyxl --add-data "taskmanager/assets;taskmanager/assets" --hidden-import taskmanager.weekly_review --hidden-import taskmanager.notifications --hidden-import taskmanager.calendar_view main.py
 
-      - name: Verify V9 release output
+      - name: Verify V10 release output
         shell: pwsh
         run: |
           if (-not (Test-Path dist/ArtursTaskmanager/ArtursTaskmanager.exe)) {
             throw 'PyInstaller did not produce the expected ArtursTaskmanager.exe'
           }
           $xref = Get-Content build/ArtursTaskmanager/xref-ArtursTaskmanager.html -Raw
-          foreach ($module in @('taskmanager.v8_kanban', 'taskmanager.v8_eisenhower', 'taskmanager.v8_planning', 'openpyxl')) {
+          foreach ($module in @('taskmanager.v10_shell', 'taskmanager.weekly_review', 'taskmanager.notifications', 'taskmanager.calendar_view', 'openpyxl')) {
             if ($xref -notmatch [regex]::Escape($module)) {
               throw "PyInstaller cross-reference does not contain $module"
             }
@@ -65,16 +69,32 @@ jobs:
           }
           Stop-Process -Id $process.Id -Force
 
+      - name: Smoke-test Windows DPI scaling
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path dist/ArtursTaskmanager/ArtursTaskmanager.exe).Path
+          foreach ($scale in @('1', '1.25', '1.5')) {
+            $env:QT_SCALE_FACTOR = $scale
+            $process = Start-Process -FilePath $exe -WorkingDirectory (Split-Path $exe) -PassThru
+            Start-Sleep -Seconds 4
+            if ($process.HasExited) { throw "EXE failed at QT_SCALE_FACTOR=$scale" }
+            Stop-Process -Id $process.Id -Force
+          }
+
       - name: Create ZIP
         shell: pwsh
         run: |
-          Compress-Archive -Path dist/ArtursTaskmanager/* -DestinationPath ArtursTaskmanager-V9.2-Windows.zip -Force
+          Compress-Archive -Path dist/ArtursTaskmanager/* -DestinationPath ArtursTaskmanager-V10.0-Windows.zip -Force
+          $hash = (Get-FileHash ArtursTaskmanager-V10.0-Windows.zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  ArtursTaskmanager-V10.0-Windows.zip" | Set-Content SHA256SUMS-V10.0.txt -Encoding ascii
 
       - name: Upload Windows ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: ArtursTaskmanager-V9.2-Windows
-          path: ArtursTaskmanager-V9.2-Windows.zip
+          name: ArtursTaskmanager-V10.0-Windows
+          path: |
+            ArtursTaskmanager-V10.0-Windows.zip
+            SHA256SUMS-V10.0.txt
           if-no-files-found: error
 
       - name: Upload EXE folder

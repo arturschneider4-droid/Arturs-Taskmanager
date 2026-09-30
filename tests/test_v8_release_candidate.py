@@ -33,9 +33,9 @@ def test_v8_refresh_reapplies_all_presentation_layers():
     assert 'controller.apply()' in text
 
 
-def test_v8_release_candidate_keeps_version_8_startup():
+def test_v10_startup_keeps_legacy_v8_shell_during_migration():
     text = Path("taskmanager/app.py").read_text(encoding="utf-8")
-    assert 'VERSION = "9.2"' in text
+    assert 'VERSION = "10.0"' in text
     assert "rebuild_professional_shell" in text
     assert "rebuild_v8_shell" in text
 

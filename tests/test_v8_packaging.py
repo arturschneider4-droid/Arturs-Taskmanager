@@ -16,8 +16,8 @@ def test_final_release_packages_excel_support_and_versioned_zip():
     requirements = Path("requirements.txt").read_text(encoding="utf-8")
     assert "openpyxl>=3.1,<4" in requirements
     assert "--collect-submodules openpyxl" in workflow
-    assert "ArtursTaskmanager-V9.2-Windows.zip" in workflow
-    assert "name: ArtursTaskmanager-V9.2-Windows" in workflow
+    assert "ArtursTaskmanager-V10.0-Windows.zip" in workflow
+    assert "name: ArtursTaskmanager-V10.0-Windows" in workflow
 
 
 def test_windows_ci_preserves_pytest_result_without_unstable_qt_teardown():

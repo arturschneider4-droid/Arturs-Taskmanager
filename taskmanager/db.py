@@ -9,6 +9,15 @@ DB_PATH = APP_DIR / "tasks.db"
 BACKUP_DIR = APP_DIR / "backups"
 
 
+def configure_storage(app_dir):
+    """Point all local persistence at one explicit application directory."""
+    global APP_DIR, DB_PATH, BACKUP_DIR
+    APP_DIR = Path(app_dir)
+    DB_PATH = APP_DIR / "tasks.db"
+    BACKUP_DIR = APP_DIR / "backups"
+    return DB_PATH
+
+
 def connect():
     APP_DIR.mkdir(parents=True, exist_ok=True)
     c = sqlite3.connect(DB_PATH)
