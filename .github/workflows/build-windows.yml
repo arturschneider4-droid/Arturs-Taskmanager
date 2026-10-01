@@ -32,9 +32,13 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller pytest
 
+      - name: Isolated Kanban regression
+        shell: pwsh
+        run: python -m pytest tests/v10/test_acceptance_audit.py::test_kanban_capture_and_pending_editor_cannot_reset_status -vv -s
+
       - name: Run tests
         shell: pwsh
-        run: python -c "import ctypes, pytest; code = int(pytest.main(['-q'])); print(f'PYTEST_EXIT_CODE={code}', flush=True); ctypes.windll.kernel32.TerminateProcess(ctypes.windll.kernel32.GetCurrentProcess(), code)"
+        run: python -c "import ctypes, pytest; code = int(pytest.main(['-vv'])); print(f'PYTEST_EXIT_CODE={code}', flush=True); ctypes.windll.kernel32.TerminateProcess(ctypes.windll.kernel32.GetCurrentProcess(), code)"
 
       - name: Run V10 main-workflow smoke test
         shell: pwsh
