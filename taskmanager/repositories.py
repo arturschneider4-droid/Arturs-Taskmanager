@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
 import sqlite3
+import calendar
 
 from .task_model import ControlMode, TaskDraft, TaskRecord
 
@@ -18,6 +19,8 @@ class QuerySpec:
     planned_from: date | None = None
     planned_to: date | None = None
     limit: int = 1000
+    metric_filter: str | None = None
+    today: date | None = None
 
 
 @dataclass(frozen=True)
@@ -62,9 +65,11 @@ class TaskRepository:
         return connection
 
     def save(self, draft: TaskDraft, task_id: int | None = None) -> int:
+        self.last_created_recurrence_id = None
         connection = self._connect()
         try:
             connection.execute("BEGIN IMMEDIATE")
+            previous = connection.execute("SELECT status FROM tasks WHERE id=?", (task_id,)).fetchone() if task_id is not None else None
             if draft.is_top_three:
                 sql = "SELECT COUNT(*) FROM tasks WHERE is_top_three=1 AND status!='Erledigt'"
                 params = ()
@@ -105,6 +110,27 @@ class TaskRepository:
                     connection.execute("INSERT INTO subtasks(task_id,title,done) VALUES(?,?,?)", (task_id, title.strip(), int(done)))
             for person in dict.fromkeys(tag.strip() for tag in draft.people_tags if tag.strip()):
                 connection.execute("INSERT INTO task_people(task_id,person) VALUES(?,?)", (task_id, person))
+            if previous and previous["status"] != "Erledigt" and draft.status == "Erledigt" and draft.recurrence != "none":
+                anchor = draft.planning_date or draft.deadline or date.today()
+                if draft.recurrence == "monthly":
+                    month = anchor.month % 12 + 1; year = anchor.year + (anchor.month == 12)
+                    target = date(year, month, min(anchor.day, calendar.monthrange(year, month)[1]))
+                else:
+                    target = anchor + timedelta(days=7 if draft.recurrence == "weekly" else 1)
+                offset = target - anchor
+                row = dict(connection.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone())
+                row.pop("id")
+                row.update(status="Offen", is_top_three=0, created_at=now, updated_at=now)
+                row["planning_date"] = target.isoformat()
+                for key in ("deadline", "due_date", "follow_up_date"):
+                    if row.get(key): row[key] = (date.fromisoformat(row[key]) + offset).isoformat()
+                if row.get("reminder_at"): row["reminder_at"] = (datetime.fromisoformat(row["reminder_at"]) + offset).isoformat()
+                columns = ','.join(row)
+                marks = ','.join('?' for _ in row)
+                next_id = connection.execute(f"INSERT INTO tasks({columns}) VALUES({marks})", tuple(row.values())).lastrowid
+                connection.execute("INSERT INTO subtasks(task_id,title,done) SELECT ?,title,0 FROM subtasks WHERE task_id=?", (next_id,task_id))
+                connection.execute("INSERT INTO task_people(task_id,person) SELECT ?,person FROM task_people WHERE task_id=?", (next_id,task_id))
+                self.last_created_recurrence_id = next_id
             connection.commit()
             return int(task_id)
         except Exception:
@@ -183,6 +209,20 @@ class TaskRepository:
                  t.deadline,t.control_mode,t.responsible_party,t.is_top_three,t.follow_up_date
                  FROM tasks t LEFT JOIN projects p ON p.id=t.project_id WHERE 1=1"""
         params = []
+        if spec.metric_filter:
+            today = spec.today or date.today()
+            filters = {
+                "today": ("status!='Erledigt' AND planning_date=?", (today.isoformat(),)),
+                "overdue": ("status!='Erledigt' AND deadline<?", (today.isoformat(),)),
+                "follow_ups": ("status!='Erledigt' AND follow_up_date<=?", (today.isoformat(),)),
+                "delegated": ("status!='Erledigt' AND control_mode='delegated'", ()),
+                "top_three": ("status!='Erledigt' AND is_top_three=1", ()),
+                "critical_deadlines": ("status!='Erledigt' AND deadline BETWEEN ? AND ?", (today.isoformat(), (today + timedelta(days=7)).isoformat())),
+                "unplanned": ("status!='Erledigt' AND planning_date IS NULL AND follow_up_date IS NULL", ()),
+                "week_progress": ("status='Erledigt' AND date(updated_at) BETWEEN ? AND ?", ((today-timedelta(days=today.weekday())).isoformat(), (today+timedelta(days=6-today.weekday())).isoformat())),
+            }
+            clause, values = filters[spec.metric_filter]
+            sql += " AND (" + clause + ")"; params.extend(values)
         if spec.search:
             sql += " AND (LOWER(t.title) LIKE ? OR LOWER(t.description) LIKE ?)"
             value = f"%{spec.search.lower()}%"

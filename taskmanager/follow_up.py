@@ -4,7 +4,7 @@ from dataclasses import dataclass, replace
 from datetime import date, datetime
 
 from PySide6.QtCore import QDate, Signal
-from PySide6.QtWidgets import QDateEdit, QDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QDateEdit, QDialog, QHeaderView, QHBoxLayout, QLabel, QLineEdit, QPushButton, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
 
 from .repositories import QuerySpec
 from .task_model import ControlMode, TaskDraft
@@ -105,6 +105,7 @@ class AssignmentDialog(QDialog):
 
 class FollowUpView(QWidget):
     next_follow_up_requested = Signal(int)
+    task_selected = Signal(int)
     columns = ("Aufgabe", "Person", "Wartezeit", "Wiedervorlage")
 
     def __init__(self, service: FollowUpService, mode: ControlMode | None, today: date | None = None, parent=None):
@@ -112,9 +113,14 @@ class FollowUpView(QWidget):
         self.service = service
         self.today = today or date.today()
         self.mode = mode
+        self.metric_filter = None
         root = QVBoxLayout(self)
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels(self.columns)
+        self.tree.header().setStretchLastSection(False)
+        self.tree.header().setSectionResizeMode(0, QHeaderView.Stretch)
+        for column in (1,2,3): self.tree.header().setSectionResizeMode(column,QHeaderView.ResizeToContents)
+        self.tree.itemClicked.connect(lambda item, _column: self.task_selected.emit(item.data(0, 256)) if item.data(0, 256) else None)
         root.addWidget(self.tree)
         self.service.store.changed.connect(lambda change: self.refresh() if "tasks" in change.domains else None)
         self.refresh()
@@ -128,15 +134,22 @@ class FollowUpView(QWidget):
     def refresh(self):
         self.tree.clear()
         groups = {}
-        for item in self.service.items(self.mode, self.today):
+        mode = None if self.metric_filter == "follow_ups" else self.mode
+        items = self.service.items(mode, self.today)
+        if self.metric_filter == "follow_ups":
+            items = [self.service.item(summary.id,self.today) for summary in self.service.repository.query(QuerySpec(metric_filter="follow_ups",today=self.today))]
+        for item in items:
+            if self.metric_filter == "follow_ups" and (item.follow_up_date is None or item.follow_up_date > self.today): continue
             groups.setdefault(item.person, []).append(item)
         for person, items in sorted(groups.items()):
-            group = QTreeWidgetItem([person])
+            group = QTreeWidgetItem([person or "Selbst nachfassen"])
             self.tree.addTopLevelItem(group)
+            group.setFirstColumnSpanned(True)
             for item in items:
                 due = item.follow_up_date.strftime("%d.%m.%Y") if item.follow_up_date else "—"
                 child = QTreeWidgetItem([item.title, item.person, f"{item.waiting_days} Tage", due])
                 child.setData(0, 256, item.task_id)
+                child.setToolTip(0, item.title)
                 group.addChild(child)
             group.setExpanded(True)
 

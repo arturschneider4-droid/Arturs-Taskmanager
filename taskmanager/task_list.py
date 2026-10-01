@@ -6,7 +6,7 @@ from enum import Enum
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QCursor
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMenu, QPushButton, QScrollArea, QToolButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMenu, QPushButton, QScrollArea, QToolButton, QVBoxLayout, QWidget, QSizePolicy
 
 from .repositories import QuerySpec, TaskSummary
 from .task_model import ControlMode
@@ -37,15 +37,21 @@ class ListTaskRow(QFrame):
         super().__init__(parent)
         self.task = task
         self.setProperty("role", "task-row")
-        self.setMinimumHeight(52)
-        layout = QHBoxLayout(self)
+        self.setMinimumHeight(88)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        layout = QVBoxLayout(self)
+        title_row = QHBoxLayout(); meta_row = QHBoxLayout()
         self.title_button = QPushButton(task.title)
         self.title_button.setAccessibleName(f"Aufgabe öffnen: {task.title}")
         self.planning_label = QLabel(f"Geplant: {task.planning_date.strftime('%d.%m.%Y')}" if task.planning_date else "Nicht geplant")
         self.deadline_label = QLabel(f"Frist: {task.deadline.strftime('%d.%m.%Y')}" if task.deadline else "")
-        layout.addWidget(self.title_button, 1)
-        layout.addWidget(self.planning_label)
-        layout.addWidget(self.deadline_label)
+        self.title_button.setToolTip(task.title)
+        self.title_button.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
+        title_row.addWidget(self.title_button, 1)
+        self.status_label = QLabel(task.status); self.status_label.setProperty("role", "chip")
+        title_row.addWidget(self.status_label)
+        meta_row.addWidget(self.planning_label); meta_row.addWidget(self.deadline_label); meta_row.addStretch(1)
+        layout.addLayout(title_row); layout.addLayout(meta_row)
         self.buttons = {}
         for action in RowAction:
             button = QToolButton()
@@ -53,8 +59,15 @@ class ListTaskRow(QFrame):
             button.setAccessibleName(f"{ACTION_LABELS[action]}: {task.title}")
             button.clicked.connect(lambda _checked=False, a=action: self.action_requested.emit(task.id, a))
             self.buttons[action] = button
-            layout.addWidget(button)
+            meta_row.addWidget(button)
         self.title_button.clicked.connect(lambda: self.selected.emit(task.id))
+
+    def resizeEvent(self, event):
+        compact = event.size().width() < 850
+        for action, button in self.buttons.items():
+            button.setVisible(not compact or action in (RowAction.COMPLETE, RowAction.MORE))
+        self.title_button.setText(self.title_button.fontMetrics().elidedText(self.task.title, Qt.ElideRight, max(50,self.title_button.width()-30)))
+        super().resizeEvent(event)
 
 
 class TaskListView(QWidget):
@@ -66,6 +79,7 @@ class TaskListView(QWidget):
         self.store = store
         self.today = today or date.today()
         self.query_spec = QuerySpec()
+        self.metric_filter = None
         self.selected_task_id = None
         self.pending_editor = None
         self._rows = []
@@ -76,9 +90,7 @@ class TaskListView(QWidget):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.content = QWidget()
-        # Keep route-local scroll state meaningful even before the first task
-        # exists; the shell's navigation contract preserves this position.
-        self.content.setMinimumHeight(1800)
+        self.content.setMinimumHeight(0)
         self.rows_layout = QVBoxLayout(self.content)
         self.rows_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.scroll_area.setWidget(self.content)
@@ -96,9 +108,14 @@ class TaskListView(QWidget):
         while self.rows_layout.count():
             item = self.rows_layout.takeAt(0)
             if item.widget():
+                item.widget().hide()
                 item.widget().deleteLater()
         self._rows = []
         self._all_summaries = self.summaries()
+        if not self._all_summaries:
+            label = QLabel("Keine Aufgaben in dieser Ansicht. Nutzen Sie ‚Neue Aufgabe‘ zum Erfassen.")
+            label.setWordWrap(True); label.setObjectName("emptyState")
+            self.rows_layout.addWidget(label)
         for task in self._all_summaries[:self._visible_count]:
             row = ListTaskRow(task)
             row.selected.connect(self.select_task)
@@ -118,7 +135,7 @@ class TaskListView(QWidget):
         self.refresh()
 
     def summaries(self):
-        return self.store.repository.query(self.query_spec)
+        return self.store.repository.query(replace(self.query_spec, metric_filter=self.metric_filter, today=self.today))
 
     def select_task(self, task_id: int) -> None:
         self.selected_task_id = task_id
@@ -149,7 +166,7 @@ class TaskListView(QWidget):
     def more_menu_for(self, task_id: int):
         if task_id not in self._menus:
             menu = QMenu(self)
-            for action in (RowAction.TODAY, RowAction.TOMORROW, RowAction.COMPLETE):
+            for action in (RowAction.TODAY, RowAction.TOMORROW, RowAction.DELEGATE, RowAction.WAIT, RowAction.COMPLETE):
                 menu.addAction(ACTION_LABELS[action], lambda _checked=False, a=action: self.perform_action(task_id, a))
             self._menus[task_id] = menu
         return self._menus[task_id]
@@ -159,6 +176,15 @@ class GroupedTaskView(TaskListView):
     def __init__(self, store, today=None, parent=None):
         self._groups = {}
         super().__init__(store, today, parent)
+
+    def _render_group_headings(self):
+        used = set()
+        for name, rows in self._groups.items():
+            members = [row for row in rows if row.task.id not in used]
+            if not members: continue
+            used.update(row.task.id for row in members)
+            label = QLabel(name); label.setObjectName("laneTitle")
+            self.rows_layout.insertWidget(self.rows_layout.indexOf(members[0]), label)
 
     def group_titles(self):
         return {name: [row.task.title for row in rows] for name, rows in self._groups.items() if rows}
@@ -184,8 +210,10 @@ class MyDayView(GroupedTaskView):
                 self._groups["Überfällig"].append(row)
             if task.follow_up_date and task.follow_up_date <= self.today:
                 self._groups["Heute nachfassen"].append(row)
+        self._render_group_headings()
 
     def summaries(self):
+        if self.metric_filter: return super().summaries()
         items = [item for item in self.store.repository.query(QuerySpec(limit=5000)) if (
             item.status != "Erledigt" and (
                 item.is_top_three or item.planning_date == self.today or
@@ -222,6 +250,9 @@ class MyDayView(GroupedTaskView):
 
 
 class NextSevenDaysView(GroupedTaskView):
+    def summaries(self):
+        return [item for item in super().summaries() if item.status != "Erledigt"]
+
     def __init__(self, store, today=None, parent=None):
         super().__init__(store, today, parent)
         self.set_query(QuerySpec(planned_from=self.today, planned_to=self.today + timedelta(days=6)))
@@ -235,3 +266,4 @@ class NextSevenDaysView(GroupedTaskView):
             if planned:
                 key = f"{names[planned.weekday()]}, {planned.strftime('%d.%m.')}"
                 self._groups.setdefault(key, []).append(row)
+        self._render_group_headings()

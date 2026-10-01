@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Protocol
+import sqlite3
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
@@ -21,6 +22,7 @@ class CommandResult:
     ok: bool
     task_id: int | None = None
     message: str = ""
+    created_ids: tuple[int, ...] = ()
 
 
 class TaskCommand(Protocol):
@@ -36,7 +38,12 @@ class SaveTask:
 
     def execute(self, repository: TaskRepository) -> CommandResult:
         task_id = repository.save(self.draft, self.task_id)
-        return CommandResult(True, task_id, "Gespeichert")
+        repeated = self.last_created_id(repository)
+        return CommandResult(True, task_id, "Gespeichert", (repeated,) if repeated else ())
+
+    @staticmethod
+    def last_created_id(repository):
+        return getattr(repository, "last_created_recurrence_id", None)
 
     def changes(self, result: CommandResult) -> ChangeSet:
         return ChangeSet(frozenset({result.task_id}), frozenset({"tasks", "dashboard"}))
@@ -64,13 +71,15 @@ class TaskStore(QObject):
 
     def apply(self, command: TaskCommand) -> CommandResult:
         task_id = getattr(command, "task_id", None)
-        if task_id is not None:
-            self.undo_manager.capture(task_id)
+        previous = self.repository.get(task_id) if task_id is not None else None
         try:
             result = command.execute(self.repository)
-        except (ValueError, OSError) as error:
+        except (ValueError, OSError, sqlite3.Error) as error:
             return CommandResult(False, message=str(error))
-        self.changed.emit(command.changes(result))
+        if result.ok:
+            created = result.created_ids + ((result.task_id,) if task_id is None and result.task_id else ())
+            self.undo_manager.record_change(previous, created)
+            self.changed.emit(command.changes(result))
         return result
 
     def undo(self) -> bool:

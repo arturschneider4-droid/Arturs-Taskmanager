@@ -54,8 +54,10 @@ class RestoreDialog(QDialog):
         self.backups.currentIndexChanged.connect(self._preview); self.restore_button.clicked.connect(self._restore); self._preview()
     def _preview(self):
         path = self.backups.currentData()
+        self.restore_button.setEnabled(bool(path))
+        if not path: self.preview_label.setText("Noch keine Backups vorhanden")
         if path:
-            preview = self.service.preview(path); self.preview_label.setText(f"{preview.task_count} Aufgaben · {preview.created_at:%d.%m.%Y %H:%M}")
+            preview = self.service.preview(path); self.preview_label.setText(f"{preview.task_count} Aufgaben · {preview.created_at:%d.%m.%Y %H:%M}\nErsetzt den aktuellen Stand. Vorher wird automatisch eine Sicherung erstellt.")
     def _restore(self):
         path = self.backups.currentData()
         if path: self.service.restore(path); self.accept()

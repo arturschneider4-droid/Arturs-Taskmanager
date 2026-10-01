@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import date
 
-from PySide6.QtWidgets import QLabel, QListWidget, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, Signal, QDate, QLocale
+from PySide6.QtWidgets import QCalendarWidget, QPushButton, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QVBoxLayout, QWidget
 
 from .task_store import SaveTask, TaskStore
 
@@ -19,6 +20,7 @@ class CalendarItem:
 
 
 class CalendarView(QWidget):
+    task_selected = Signal(int)
     deadline_action_label = "Deadline ausdrücklich verschieben"
 
     def __init__(self, store: TaskStore, today: date | None = None, parent=None):
@@ -27,7 +29,22 @@ class CalendarView(QWidget):
         root = QVBoxLayout(self)
         self.legend_label = QLabel("● Planung   ◆ Deadline")
         self.listing = QListWidget()
+        self.listing.itemClicked.connect(lambda item: self.task_selected.emit(item.data(Qt.UserRole)))
+        self.listing.itemActivated.connect(lambda item: self.task_selected.emit(item.data(Qt.UserRole)))
+        self.calendar = QCalendarWidget(); self.calendar.setSelectedDate(QDate(self.today))
+        self.calendar.setGridVisible(True)
+        self.calendar.setLocale(QLocale(QLocale.German, QLocale.Germany))
+        self.calendar.setFirstDayOfWeek(Qt.Monday)
+        self.calendar.setMaximumHeight(270)
+        root.addWidget(self.calendar)
         root.addWidget(self.legend_label); root.addWidget(self.listing)
+        self.plan_button = QPushButton("Planung auf gewählten Tag")
+        self.deadline_button = QPushButton(self.deadline_action_label)
+        self.feedback = QLabel(); self.feedback.setWordWrap(True)
+        buttons = QHBoxLayout(); buttons.addWidget(self.plan_button); buttons.addWidget(self.deadline_button)
+        root.addLayout(buttons); root.addWidget(self.feedback)
+        self.plan_button.clicked.connect(lambda: self._apply_selected_date(False))
+        self.deadline_button.clicked.connect(lambda: self._apply_selected_date(True))
         self.store.changed.connect(lambda change: self.refresh() if "tasks" in change.domains else None)
         self.refresh()
 
@@ -37,7 +54,17 @@ class CalendarView(QWidget):
         for item in self._items:
             planning = item.planning_date.strftime("%d.%m.") if item.planning_date else "—"
             deadline = item.deadline.strftime("%d.%m.") if item.deadline else "—"
-            self.listing.addItem(f"● {planning}  ◆ {deadline}  {item.title}")
+            row = QListWidgetItem(f"● {planning}  ◆ {deadline}  {item.title}")
+            row.setData(Qt.UserRole, item.task_id); self.listing.addItem(row)
+
+    def _apply_selected_date(self, deadline):
+        selected = self.listing.currentItem()
+        if selected is None:
+            self.feedback.setText("Bitte zuerst eine Aufgabe auswählen"); return
+        task_id = selected.data(Qt.UserRole)
+        operation = self.move_deadline_explicitly if deadline else self.move_planning_date
+        if operation(task_id, self.calendar.selectedDate().toPython()):
+            self.feedback.setText("Deadline verschoben" if deadline else "Planung verschoben; Deadline bleibt unverändert")
 
     def item_for(self, task_id):
         return next(item for item in self._items if item.task_id == task_id)

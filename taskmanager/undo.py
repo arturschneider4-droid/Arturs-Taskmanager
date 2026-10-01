@@ -10,9 +10,15 @@ class UndoManager:
     def capture(self, task_id):
         record = self.repository.get(task_id)
         if record is not None: self._stack.append(record)
+    def record_change(self, previous, created_ids=()):
+        if previous is not None or created_ids:
+            self._stack.append((previous, created_ids))
     def undo(self):
         if not self._stack: return False
-        record = self._stack.pop()
+        entry = self._stack.pop()
+        record, created_ids = entry if isinstance(entry, tuple) else (entry, ())
+        for task_id in created_ids: self.repository.delete(task_id)
+        if record is None: return True
         if self.repository.get(record.id) is None:
             connection = sqlite3.connect(self.repository.db_path)
             connection.execute(

@@ -6,7 +6,7 @@ import re
 from typing import Sequence
 
 from PySide6.QtCore import QEvent, Qt, Signal
-from PySide6.QtWidgets import QFrame, QLabel, QLineEdit, QListWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QLabel, QLineEdit, QListWidget, QListWidgetItem, QPushButton, QHBoxLayout, QVBoxLayout, QWidget
 
 from .repositories import QuerySpec
 from .task_model import ControlMode, TaskDraft
@@ -113,13 +113,24 @@ class QuickCaptureOverlay(QFrame):
         self.preview_label = QLabel()
         layout.addWidget(self.input)
         layout.addWidget(self.preview_label)
+        self.preview_label.setWordWrap(True)
+        buttons = QHBoxLayout()
+        self.save_button = QPushButton("Aufgabe anlegen"); self.save_button.setProperty("variant", "primary")
+        self.advanced_button = QPushButton("Details ergänzen"); self.cancel_button = QPushButton("Abbrechen")
+        self.save_button.clicked.connect(self._save); self.advanced_button.clicked.connect(self.advanced_requested)
+        self.cancel_button.clicked.connect(self.hide)
+        for button in (self.save_button,self.advanced_button,self.cancel_button): buttons.addWidget(button)
+        layout.addLayout(buttons)
         self.input.textChanged.connect(self._refresh_preview)
         self.input.returnPressed.connect(self._save)
         self.input.escape_pressed.connect(self.hide)
         self.input.tab_pressed.connect(self.advanced_requested.emit)
 
     def _preview(self) -> CapturePreview:
-        return parse_capture(self.input.text(), self.today, self.projects)
+        connection = self.store.repository._connect()
+        self._project_ids = {row["name"]: row["id"] for row in connection.execute("SELECT id,name FROM projects")}
+        connection.close()
+        return parse_capture(self.input.text(), self.today, tuple(dict.fromkeys((*self.projects, *self._project_ids))))
 
     def _refresh_preview(self) -> None:
         preview = self._preview()
@@ -141,8 +152,10 @@ class QuickCaptureOverlay(QFrame):
             self.preview_label.setText("Person oder Organisation in den erweiterten Feldern ergänzen")
             self.advanced_requested.emit()
             return
+        if preview.estimated_minutes is not None and preview.estimated_minutes <= 0:
+            self.preview_label.setText("Geschätzte Dauer muss positiv sein"); return
         result = self.store.apply(SaveTask(TaskDraft(
-            title=preview.title, planning_date=preview.planning_date,
+            title=preview.title, project_id=self._project_ids.get(preview.project), planning_date=preview.planning_date,
             priority=preview.priority, estimated_minutes=preview.estimated_minutes,
         )))
         if result.ok:
@@ -154,12 +167,15 @@ class QuickCaptureOverlay(QFrame):
 
 
 class InboxView(QWidget):
+    task_selected = Signal(int)
     def __init__(self, store: TaskStore, parent=None):
         super().__init__(parent)
         self.store = store
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel("Eingang"))
         self.list = QListWidget()
+        self.list.itemClicked.connect(lambda item: self.task_selected.emit(item.data(Qt.UserRole)))
+        self.list.itemActivated.connect(lambda item: self.task_selected.emit(item.data(Qt.UserRole)))
         layout.addWidget(self.list, 1)
         store.changed.connect(lambda change: self.refresh() if "tasks" in change.domains else None)
         self.refresh()
@@ -168,8 +184,9 @@ class InboxView(QWidget):
         self.list.clear()
         for summary in self.store.repository.query(QuerySpec(limit=5000)):
             record = self.store.repository.get(summary.id)
-            if record and not is_clarified(record.draft):
-                self.list.addItem(record.draft.title)
+            if record and record.draft.status != "Erledigt" and not is_clarified(record.draft):
+                item = QListWidgetItem(record.draft.title); item.setData(Qt.UserRole, record.id)
+                self.list.addItem(item)
 
     def titles(self) -> list[str]:
         return [self.list.item(index).text() for index in range(self.list.count())]

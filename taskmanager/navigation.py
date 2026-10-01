@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from enum import Enum
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, Qt
+from PySide6.QtGui import QIcon, QPainter, QColor
 from PySide6.QtWidgets import QButtonGroup, QPushButton, QVBoxLayout, QWidget
 
 from .design_tokens import IconRegistry
@@ -49,6 +50,7 @@ class Navigation(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("v10Navigation")
+        self.setAttribute(Qt.WA_StyledBackground, True)
         self._buttons = {}
         self._group = QButtonGroup(self)
         self._group.setExclusive(True)
@@ -58,7 +60,12 @@ class Navigation(QWidget):
         icons = IconRegistry()
         for route in Route:
             icon_name, label = ROUTE_LABELS[route]
-            button = QPushButton(icons.icon(icon_name), label)
+            pixmap = icons.icon(icon_name).pixmap(24, 24)
+            painter = QPainter(pixmap)
+            painter.setCompositionMode(QPainter.CompositionMode_SourceIn)
+            painter.fillRect(pixmap.rect(), QColor("#E2EAF0"))
+            painter.end()
+            button = QPushButton(QIcon(pixmap), label)
             button.setObjectName(f"nav_{route.value}")
             button.setAccessibleName(label)
             button.setCheckable(True)

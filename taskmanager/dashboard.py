@@ -6,8 +6,8 @@ from enum import Enum
 from pathlib import Path
 import sqlite3
 
-from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtCore import Signal, Qt
+from PySide6.QtWidgets import QCheckBox, QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from .components import MetricCard, PrimaryButton
 from .repositories import DashboardRepository
@@ -97,8 +97,8 @@ class ExecutiveDashboard(QWidget):
         layout = QVBoxLayout(self)
         title = QLabel("Executive Dashboard")
         title.setObjectName("pageTitle")
-        layout.addWidget(title)
-        grid = QGridLayout()
+        title.hide() # The shell provides the page heading
+        grid = QGridLayout(); self.grid = grid
         for index, filter_key in enumerate(DashboardFilter):
             card = MetricCard(filter_key.label, 0, filter_key.value)
             card.setObjectName(f"metric_{filter_key.value}")
@@ -110,6 +110,12 @@ class ExecutiveDashboard(QWidget):
         store.changed.connect(self._on_change)
         self.refresh()
 
+    def resizeEvent(self, event):
+        columns = 4 if event.size().width() >= 1000 else 2
+        for index, card in enumerate(self._cards.values()):
+            self.grid.removeWidget(card); self.grid.addWidget(card, index // columns, index % columns)
+        super().resizeEvent(event)
+
     def card_for(self, filter_key: DashboardFilter) -> MetricCard:
         return self._cards[filter_key]
 
@@ -117,7 +123,7 @@ class ExecutiveDashboard(QWidget):
         snapshot = self.service.snapshot(self.today)
         for filter_key, card in self._cards.items():
             value = snapshot.metric_values[filter_key.value]
-            card.value_label.setText(str(value))
+            card.value_label.setText(f"{value} %" if filter_key is DashboardFilter.WEEK_PROGRESS else str(value))
             card.setAccessibleName(f"{filter_key.label}: {value}")
         self.refresh_count += 1
 
@@ -132,17 +138,24 @@ class WeeklyFocusPanel(QWidget):
     def __init__(self, store: TaskStore, today: date | None = None, parent=None):
         super().__init__(parent)
         self.setObjectName("weeklyFocusPanel")
+        self.setAttribute(Qt.WA_StyledBackground, True)
         self.store = store
         self.today = today or date.today()
         self.service = DashboardService(store.repository.db_path)
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Wochenfokus"))
+        heading=QLabel("Wochenfokus"); heading.setObjectName("laneTitle"); layout.addWidget(heading)
         self.goals_label = QLabel()
+        self.goal_checks = []
+        for index in range(3):
+            check = QCheckBox(); check.setObjectName(f"weekly_goal_{index+1}")
+            check.clicked.connect(lambda done, position=index+1: self._set_goal_done(position, done))
+            self.goal_checks.append(check); layout.addWidget(check)
         self.deadline_label = QLabel()
         self.delegation_label = QLabel()
         self.follow_up_label = QLabel()
         self.progress_label = QLabel()
         for widget in (self.goals_label, self.deadline_label, self.delegation_label, self.follow_up_label, self.progress_label):
+            widget.setWordWrap(True)
             layout.addWidget(widget)
         layout.addStretch(1)
         self.review_button = PrimaryButton("Wochenreview starten")
@@ -154,6 +167,12 @@ class WeeklyFocusPanel(QWidget):
 
     def refresh(self) -> None:
         snapshot = self.service.weekly_focus(self.today)
+        for index, check in enumerate(self.goal_checks):
+            check.setVisible(index < len(snapshot.goals))
+            if index < len(snapshot.goals):
+                check.setText(snapshot.goals[index].title); check.setToolTip(snapshot.goals[index].title)
+                check.setChecked(snapshot.goals[index].done)
+        self.goals_label.setVisible(not snapshot.goals)
         self.goals_label.setText("\n".join(("✓ " if goal.done else "○ ") + goal.title for goal in snapshot.goals) or "Noch keine Wochenziele")
         self.deadline_label.setText("Nächste Deadline: " + (snapshot.next_deadline or "–"))
         self.delegation_label.setText("Älteste Delegation: " + (snapshot.oldest_delegation or "–"))
@@ -163,3 +182,10 @@ class WeeklyFocusPanel(QWidget):
     def _on_change(self, change: ChangeSet) -> None:
         if "dashboard" in change.domains:
             self.refresh()
+
+    def _set_goal_done(self, position, done):
+        year, week, _ = self.today.isocalendar()
+        connection = sqlite3.connect(self.store.repository.db_path)
+        connection.execute("UPDATE weekly_goals SET done=? WHERE year=? AND week=? AND position=?", (int(done), year, week, position))
+        connection.commit(); connection.close()
+        self.store.changed.emit(ChangeSet(frozenset(), frozenset({"dashboard"})))

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from enum import Enum
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal, Qt
 from PySide6.QtGui import QKeySequence, QShortcut
-from PySide6.QtWidgets import QApplication, QFrame, QLineEdit, QListWidget, QTextEdit, QVBoxLayout
+from PySide6.QtWidgets import QAbstractSpinBox, QComboBox, QApplication, QFrame, QLineEdit, QListWidget, QTextEdit, QVBoxLayout
 
 from .repositories import QuerySpec
 
@@ -48,7 +48,7 @@ class ShortcutController(QObject):
 
     def dispatch(self, action: ShortcutAction) -> bool:
         focus = QApplication.focusWidget()
-        if isinstance(focus, (QLineEdit, QTextEdit)):
+        if isinstance(focus, (QLineEdit, QTextEdit, QAbstractSpinBox, QComboBox)):
             return False
         self.dispatched.emit(ShortcutAction(action))
         return True
@@ -58,12 +58,24 @@ class CommandSearchOverlay(QFrame):
     task_selected = Signal(int)
     def __init__(self, store, parent=None):
         super().__init__(parent); self.store = store; self.setObjectName("commandSearchOverlay")
-        root = QVBoxLayout(self); self.input = QLineEdit(); self.input.setPlaceholderText("Aufgaben und Befehle durchsuchen …")
+        root = QVBoxLayout(self); self.input = QLineEdit(); self.input.setPlaceholderText("Aufgaben durchsuchen …")
         self.results = QListWidget(); root.addWidget(self.input); root.addWidget(self.results)
+        self.escape = QShortcut(QKeySequence("Escape"), self)
+        self.escape.setContext(Qt.WidgetWithChildrenShortcut); self.escape.activated.connect(self.hide)
+        self.input.installEventFilter(self)
         self.input.textChanged.connect(self.refresh); self.results.itemActivated.connect(lambda item: self.task_selected.emit(item.data(256)))
+    def eventFilter(self, watched, event):
+        from PySide6.QtCore import QEvent
+        if event.type() == QEvent.KeyPress and event.key() == Qt.Key_Escape:
+            self.hide(); return True
+        return super().eventFilter(watched, event)
+
     def refresh(self, text=""):
         self.results.clear()
         for task in self.store.repository.query(QuerySpec(search=text, limit=50)):
             self.results.addItem(task.title); self.results.item(self.results.count() - 1).setData(256, task.id)
     def open(self):
+        if self.parentWidget():
+            self.setFixedWidth(min(620,self.parentWidget().width()-32))
+            self.move(max(16,(self.parentWidget().width()-self.width())//2),80)
         self.refresh(self.input.text()); self.show(); self.raise_(); self.input.setFocus()

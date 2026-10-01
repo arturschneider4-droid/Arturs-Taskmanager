@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from enum import Enum
 
 from PySide6.QtCore import QDate, QDateTime, QTimer, Signal
@@ -38,6 +38,9 @@ class DetailPanel(QFrame):
         self.edit_revision = 0
         self.saved_revision = 0
         self._loading = False
+        self._saving = False
+        self._baseline = {}
+        self.default_reminder_minutes = 30
         self.setObjectName("v10DetailPanel")
         root = QVBoxLayout(self)
         header = QFormLayout()
@@ -71,6 +74,11 @@ class DetailPanel(QFrame):
                 self.priority_combo = QComboBox()
                 for label, value in (("Wichtig & dringend", "important_urgent"), ("Wichtig", "important_not_urgent"), ("Dringend", "not_important_urgent"), ("Später", "not_important_not_urgent")): self.priority_combo.addItem(label, value)
                 section_layout.addWidget(self.priority_combo)
+                self.project_combo = QComboBox(); self.project_combo.setObjectName("detail_project")
+                self.project_combo.setEditable(True); self.project_combo.setInsertPolicy(QComboBox.NoInsert)
+                section_layout.addWidget(QLabel("Themengebiet (neu eingeben oder auswählen)")); section_layout.addWidget(self.project_combo)
+                self.top_three = QCheckBox("Top 3 des Tages"); self.top_three.setObjectName("detail_top_three")
+                section_layout.addWidget(self.top_three)
             elif name == "Steuerung":
                 self.control_combo = QComboBox(); self.control_combo.addItem("Selbst", "self"); self.control_combo.addItem("Delegiert", "delegated"); self.control_combo.addItem("Warten auf", "waiting")
                 section_layout.addWidget(self.control_combo)
@@ -89,6 +97,7 @@ class DetailPanel(QFrame):
                 section_layout.addWidget(self.reminder_enabled); section_layout.addWidget(self.reminder_at); section_layout.addWidget(self.recurrence_combo)
             self._sections.append((name, section))
             self.sections_layout.addWidget(section)
+        for label in content.findChildren(QLabel): label.setWordWrap(True)
         self.sections_layout.addStretch(1)
         self.scroll.setWidget(content)
         root.addWidget(self.scroll, 1)
@@ -112,15 +121,57 @@ class DetailPanel(QFrame):
         ):
             signal.connect(lambda *_args: self._queue_save())
 
+        self.project_combo.currentTextChanged.connect(self._queue_save)
+        self.top_three.toggled.connect(self._queue_save)
+        self.subtasks_edit.setPlaceholderText("[ ] Offene Unteraufgabe\n[x] Erledigte Unteraufgabe")
+        for enabled, field in ((self.planning_enabled,self.planning_date), (self.deadline_enabled,self.deadline_date), (self.follow_up_enabled,self.follow_up_date), (self.reminder_enabled,self.reminder_at)):
+            enabled.toggled.connect(field.setEnabled)
+        for field in (self.planning_date,self.deadline_date,self.follow_up_date): field.setDisplayFormat("dd.MM.yyyy")
+        self.reminder_at.setDisplayFormat("dd.MM.yyyy HH:mm")
+        for name, widget in {
+            "Titel":self.title_edit,"Status":self.status_combo,"Priorität":self.priority_combo,
+            "Themengebiet":self.project_combo,"Planungsdatum":self.planning_date,"Deadline":self.deadline_date,
+            "Aufwand in Minuten":self.estimated_minutes,"Steuerung":self.control_combo,"Person":self.person_edit,
+            "Wiedervorlage":self.follow_up_date,"Beschreibung":self.description_edit,"Unteraufgaben":self.subtasks_edit,
+            "Erinnerungszeit":self.reminder_at,"Wiederholung":self.recurrence_combo,
+        }.items():
+            widget.setAccessibleName(name)
+            if not widget.objectName(): widget.setObjectName("detail_" + name.lower().replace(" ","_"))
+        self.status_label.setWordWrap(True)
+        self.store.changed.connect(self._on_store_change)
+
+    def _on_store_change(self, change):
+        if self._saving or self.task_id is None or "tasks" not in change.domains:
+            return
+        if change.task_ids and self.task_id not in change.task_ids:
+            return
+        if self.save_state not in (SaveState.PENDING, SaveState.ERROR):
+            self.open_task(self.task_id)
+
+    def flush(self):
+        if self.save_state in (SaveState.PENDING, SaveState.ERROR):
+            self._save()
+        return self.save_state is not SaveState.ERROR
+
     def section_names(self) -> tuple[str, ...]:
         return tuple(name for name, _ in self._sections)
 
     def open_task(self, task_id: int) -> None:
+        if not self._loading and not self.flush():
+            return
+        self._save_timer.stop()
         self.task_id = task_id
         self.record = self.store.repository.get(task_id)
         self._loading = True
         if self.record:
             draft = self.record.draft
+            self.project_combo.clear(); self.project_combo.addItem("Ohne Themengebiet", None)
+            connection = self.store.repository._connect()
+            for row in connection.execute("SELECT id,name FROM projects ORDER BY name"):
+                self.project_combo.addItem(row["name"], row["id"])
+            connection.close()
+            self.project_combo.setCurrentIndex(max(0,self.project_combo.findData(draft.project_id)))
+            self.top_three.setChecked(draft.is_top_three)
             self.title_edit.setText(draft.title); self.description_edit.setPlainText(draft.description)
             self.status_combo.setCurrentText(draft.status)
             self.priority_combo.setCurrentIndex(max(0, self.priority_combo.findData(draft.priority)))
@@ -130,11 +181,14 @@ class DetailPanel(QFrame):
             self.control_combo.setCurrentIndex(max(0, self.control_combo.findData(draft.control_mode.value)))
             self.person_edit.setText(draft.responsible_party or "")
             self.follow_up_enabled.setChecked(draft.follow_up_date is not None); self.follow_up_date.setDate(QDate(draft.follow_up_date or date.today()))
-            self.subtasks_edit.setPlainText("\n".join(title for title, _done in draft.subtasks))
+            self.subtasks_edit.setPlainText("\n".join(("[x] " if done else "[ ] ") + title for title, done in draft.subtasks))
             self.reminder_enabled.setChecked(draft.reminder_enabled)
-            self.reminder_at.setDateTime(QDateTime(draft.reminder_at or datetime.now()))
+            self.reminder_at.setDateTime(QDateTime(draft.reminder_at or datetime.now() + timedelta(minutes=self.default_reminder_minutes)))
             self.recurrence_combo.setCurrentIndex(max(0, self.recurrence_combo.findData(draft.recurrence)))
+        for enabled, field in ((self.planning_enabled,self.planning_date), (self.deadline_enabled,self.deadline_date), (self.follow_up_enabled,self.follow_up_date), (self.reminder_enabled,self.reminder_at)):
+            field.setEnabled(enabled.isChecked())
         self._loading = False
+        self._baseline = self._form_values()
         self.save_state = SaveState.IDLE
         self.status_label.setText("")
         self.opened.emit(task_id)
@@ -147,35 +201,76 @@ class DetailPanel(QFrame):
         self.status_label.setText("Änderungen offen")
         self._save_timer.start()
 
+    def _form_values(self):
+        subtasks = []
+        for line in self.subtasks_edit.toPlainText().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            done = line.lower().startswith("[x] ")
+            title = line[4:] if line[:4].lower() in ("[x] ", "[ ] ") else line
+            if title.strip():
+                subtasks.append((title.strip(), done))
+        return dict(
+            project_name=self.project_combo.currentText(), is_top_three=self.top_three.isChecked(),
+            title=self.title_edit.text(), description=self.description_edit.toPlainText(),
+            status=self.status_combo.currentText(), priority=self.priority_combo.currentData(),
+            planning_date=self.planning_date.date().toPython() if self.planning_enabled.isChecked() else None,
+            deadline=self.deadline_date.date().toPython() if self.deadline_enabled.isChecked() else None,
+            estimated_minutes=self.estimated_minutes.value() or None,
+            control_mode=self.control_combo.currentData(), responsible_party=self.person_edit.text() or None,
+            follow_up_date=self.follow_up_date.date().toPython() if self.follow_up_enabled.isChecked() else None,
+            subtasks=tuple(subtasks), recurrence=self.recurrence_combo.currentData(),
+            reminder_enabled=self.reminder_enabled.isChecked(),
+            reminder_at=self.reminder_at.dateTime().toPython() if self.reminder_enabled.isChecked() else None,
+        )
+
     def _save(self) -> None:
+        self._save_timer.stop()
+        if self.task_id is None:
+            return
         revision = self.edit_revision
         self.save_state = SaveState.SAVING
         self.status_label.setText("Speichern …")
+        latest = self.store.repository.get(self.task_id)
+        if latest is None:
+            self.save_state = SaveState.ERROR
+            self.status_label.setText("Aufgabe wurde gelöscht")
+            return
+        values = self._form_values()
+        # Only fields actually edited here may replace current persisted values.
+        # Other views can have changed status, dates or priority in the meantime.
+        changes = {key: value for key, value in values.items() if value != self._baseline.get(key)}
+        project_name = changes.pop("project_name", None)
+        if project_name is not None:
+            name = project_name.strip()
+            if not name or name == "Ohne Themengebiet": changes["project_id"] = None
+            else:
+                connection = self.store.repository._connect()
+                row = connection.execute("SELECT id FROM projects WHERE name=?", (name,)).fetchone()
+                if row: changes["project_id"] = row[0]
+                else:
+                    changes["project_id"] = connection.execute("INSERT INTO projects(name) VALUES(?)",(name,)).lastrowid
+                    connection.commit()
+                connection.close()
         try:
-            subtasks = tuple((line.strip(), False) for line in self.subtasks_edit.toPlainText().splitlines() if line.strip())
-            draft = replace(
-                self.record.draft, title=self.title_edit.text(), description=self.description_edit.toPlainText(),
-                status=self.status_combo.currentText(), priority=self.priority_combo.currentData(),
-                planning_date=self.planning_date.date().toPython() if self.planning_enabled.isChecked() else None,
-                deadline=self.deadline_date.date().toPython() if self.deadline_enabled.isChecked() else None,
-                estimated_minutes=self.estimated_minutes.value() or None,
-                control_mode=self.control_combo.currentData(), responsible_party=self.person_edit.text() or None,
-                follow_up_date=self.follow_up_date.date().toPython() if self.follow_up_enabled.isChecked() else None,
-                subtasks=subtasks, recurrence=self.recurrence_combo.currentData(),
-                reminder_enabled=self.reminder_enabled.isChecked(),
-                reminder_at=self.reminder_at.dateTime().toPython() if self.reminder_enabled.isChecked() else None,
-            )
+            draft = replace(latest.draft, **changes)
         except ValueError as error:
             self.save_state = SaveState.ERROR
             self.status_label.setText(str(error))
             return
-        result = self.store.apply(SaveTask(draft, self.task_id))
+        self._saving = True
+        try:
+            result = self.store.apply(SaveTask(draft, self.task_id))
+        finally:
+            self._saving = False
         if not result.ok:
             self.save_state = SaveState.ERROR
             self.status_label.setText(result.message or "Speichern fehlgeschlagen")
             return
         if revision == self.edit_revision:
-            self.record = self.store.repository.get(self.task_id)
+            self.save_state = SaveState.SAVED
             self.saved_revision = revision
+            self.open_task(self.task_id)
             self.save_state = SaveState.SAVED
             self.status_label.setText("Gespeichert")

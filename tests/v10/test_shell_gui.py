@@ -42,8 +42,12 @@ def test_closing_task_restores_weekly_focus(shell, qtbot):
     qtbot.waitUntil(lambda: shell.context_stack.currentWidget() is shell.weekly_focus)
 
 
-def test_navigation_does_not_rebuild_page_or_reset_scroll(shell):
+def test_navigation_does_not_rebuild_page_or_reset_scroll(shell, qtbot):
+    from taskmanager.task_model import TaskDraft
+    for i in range(30): shell.store.repository.save(TaskDraft(title=f"Aufgabe {i}"))
+    shell.navigate(Route.TASKS)
     tasks = shell.page_for(Route.TASKS)
+    qtbot.waitUntil(lambda: tasks.scroll_area.verticalScrollBar().maximum() > 37)
     tasks.scroll_area.verticalScrollBar().setValue(37)
     identity = id(tasks)
     shell.navigate(Route.INBOX)

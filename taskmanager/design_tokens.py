@@ -67,8 +67,16 @@ def build_stylesheet(tokens: DesignTokens, density: Density) -> str:
     QWidget[role="task-row"] {{ min-height: {metrics.task_row_height}px; background: {tokens.surface}; border-bottom: 1px solid {tokens.border}; }}
     QPushButton[role="metric-card"] {{ min-height: 108px; text-align: left; background: {tokens.surface}; border: 1px solid {tokens.border}; border-radius: 12px; }}
     QPushButton[role="metric-card"]:hover {{ border: 1px solid {tokens.accent}; background: #F3FBFA; }}
-    QPushButton[role="metric-card"] QLabel:first-child {{ font-size: 28px; font-weight: 700; color: {tokens.navigation}; }}
-    QLineEdit, QTextEdit, QComboBox, QSpinBox, QDateEdit {{ min-height: {metrics.control_height}px; background: white; border: 1px solid {tokens.border}; border-radius: 7px; padding: 0 10px; selection-background-color: {tokens.accent}; }}
+    QLabel#metricValue {{ font-size: 28px; font-weight: 700; color: {tokens.navigation}; }}
+    QLabel#laneTitle {{ font-size: 15px; font-weight: 600; padding: 8px 0; }}
+    QLabel#emptyState {{ color: {tokens.text_muted}; padding: 24px; }}
+    QFrame#quickCaptureOverlay, QFrame#commandSearchOverlay {{ background: white; border: 2px solid {tokens.accent}; border-radius: 12px; padding: 12px; }}
+    QListWidget#boardLane {{ background: #EEF3F6; padding: 8px; border-top: 3px solid {tokens.accent}; }}
+    QListWidget#boardLane::item {{ background: white; border: 1px solid {tokens.border}; border-radius: 8px; padding: 10px; }}
+    QListWidget#boardLane::item:selected {{ background: #DDF3F1; border-color: {tokens.accent}; color: {tokens.text}; }}
+    QToolButton {{ padding: 5px 8px; border: 1px solid {tokens.border}; border-radius: 5px; background: white; }}
+    QToolButton:hover {{ background: #DDF3F1; }}
+    QLineEdit, QTextEdit, QComboBox, QSpinBox, QDateEdit, QDateTimeEdit {{ min-height: {metrics.control_height}px; background: white; border: 1px solid {tokens.border}; border-radius: 7px; padding: 0 10px; selection-background-color: {tokens.accent}; }}
     QLineEdit:focus, QTextEdit:focus, QComboBox:focus, QSpinBox:focus, QDateEdit:focus {{ border: 2px solid {tokens.accent}; }}
     QScrollArea, QListWidget, QTreeWidget {{ background: {tokens.surface}; border: 1px solid {tokens.border}; border-radius: 8px; }}
     QHeaderView::section {{ background: #EDF2F5; color: {tokens.text_muted}; border: 0; border-bottom: 1px solid {tokens.border}; padding: 9px; font-weight: 600; }}

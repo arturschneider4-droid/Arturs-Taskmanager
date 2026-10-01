@@ -5,7 +5,7 @@ from datetime import date, datetime
 import json
 import sqlite3
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, Qt
 from PySide6.QtWidgets import QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
 
 
@@ -112,6 +112,7 @@ class WeeklyReviewService:
 
 class WeeklyReviewView(QWidget):
     completed = Signal(object)
+    paused = Signal()
 
     def __init__(self, service: WeeklyReviewService, parent=None):
         super().__init__(parent)
@@ -128,9 +129,12 @@ class WeeklyReviewView(QWidget):
         self.back_button.setObjectName("review_back"); self.next_button.setObjectName("review_next"); self.cancel_button.setObjectName("review_cancel")
         for widget in (self.step_label, self.answer_edit, self.feedback_label, self.back_button, self.next_button, self.cancel_button):
             root.addWidget(widget)
+        root.addStretch(1)
+        self.feedback_label.setWordWrap(True)
+        self.step_label.setWordWrap(True)
         self.back_button.clicked.connect(self._back)
         self.next_button.clicked.connect(self._next)
-        self.cancel_button.clicked.connect(self.hide)
+        self.cancel_button.clicked.connect(self._pause)
         self._render()
 
     @property
@@ -141,9 +145,21 @@ class WeeklyReviewView(QWidget):
         self.step_label.setText(f"Schritt {self.step_number} von 7 · {REVIEW_STEPS[self.step_number - 1]}")
         self.back_button.setEnabled(self.step_number > 1)
         self.next_button.setText("Review abschließen" if self.step_number == 7 else "Weiter")
-        self.answer_edit.clear(); self.feedback_label.clear()
+        self.answer_edit.setText(self.session.answers.get(f"step_{self.step_number}", ""))
+        self.answer_edit.setPlaceholderText("Bis zu drei Wochenziele, getrennt durch ;" if self.step_number == 7 else "Entscheidung oder Ergebnis festhalten")
+        self.feedback_label.clear()
+
+    def _persist_answer(self):
+        answers = dict(self.session.answers)
+        answers[f"step_{self.step_number}"] = self.answer_edit.text()
+        self.service._update(self.session.id, self.step_number, answers)
+        self.session = self.service.resume()
+
+    def _pause(self):
+        self._persist_answer(); self.paused.emit(); self.hide()
 
     def _back(self):
+        self._persist_answer()
         self.session = self.service.back(); self._render()
 
     def _next(self):
@@ -152,6 +168,11 @@ class WeeklyReviewView(QWidget):
             self.feedback_label.setText("Bitte eine Entscheidung festhalten")
             return
         if self.step_number == 7:
+            goals = [part.strip() for part in answer.split(";") if part.strip()]
+            try: self.service.set_goals(goals)
+            except ValueError as error:
+                self.feedback_label.setText(str(error)); return
+            self._persist_answer()
             summary = self.service.complete()
             self.completed.emit(summary)
             return

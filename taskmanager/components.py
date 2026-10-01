@@ -55,7 +55,9 @@ class MetricCard(QPushButton):
         self.filter_key = filter_key
         layout = QVBoxLayout(self)
         self.value_label = QLabel(str(value))
+        self.value_label.setObjectName("metricValue")
         self.label = QLabel(label)
+        self.label.setWordWrap(True)
         layout.addWidget(self.value_label)
         layout.addWidget(self.label)
         self.setAccessibleName(f"{label}: {value}")
