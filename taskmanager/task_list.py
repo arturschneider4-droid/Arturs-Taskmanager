@@ -6,7 +6,7 @@ from enum import Enum
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QCursor
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMenu, QPushButton, QScrollArea, QToolButton, QVBoxLayout, QWidget, QSizePolicy
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMenu, QPushButton, QScrollArea, QToolButton, QVBoxLayout, QWidget, QSizePolicy, QLayout
 
 from .repositories import QuerySpec, TaskSummary
 from .task_model import ControlMode
@@ -37,9 +37,9 @@ class ListTaskRow(QFrame):
         super().__init__(parent)
         self.task = task
         self.setProperty("role", "task-row")
-        self.setMinimumHeight(88)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         layout = QVBoxLayout(self)
+        layout.setSizeConstraint(QLayout.SetMinimumSize)
         title_row = QHBoxLayout(); meta_row = QHBoxLayout()
         self.title_button = QPushButton(task.title)
         self.title_button.setAccessibleName(f"Aufgabe öffnen: {task.title}")

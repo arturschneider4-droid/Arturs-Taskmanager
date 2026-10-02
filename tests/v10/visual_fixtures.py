@@ -41,9 +41,9 @@ def seed_visual_tasks(repository):
 
 def render_route(route: Route, size: tuple[int, int], target: Path):
     # Freeze application clocks; reference images must remain valid next week.
-    from taskmanager import dashboard, repositories, follow_up, task_list, calendar_view, weekly_review, quick_capture, detail_panel
+    from taskmanager import dashboard, repositories, follow_up, task_list, calendar_view, weekly_review, quick_capture, detail_panel, board_views
     with tempfile.TemporaryDirectory(prefix="v10-visual-") as directory, ExitStack() as patches:
-        for module in (dashboard,repositories,follow_up,task_list,calendar_view,weekly_review,quick_capture,detail_panel):
+        for module in (dashboard,repositories,follow_up,task_list,calendar_view,weekly_review,quick_capture,detail_panel,board_views):
             patches.enter_context(patch.object(module, 'date', VisualDate))
         db.configure_storage(Path(directory)); db.init_db(); migrate_to_v10(db.DB_PATH, db.BACKUP_DIR)
         repo=TaskRepository(db.DB_PATH);seed_visual_tasks(repo)

@@ -45,6 +45,8 @@ class V10Shell(QMainWindow):
     def __init__(self, store: TaskStore, parent=None):
         super().__init__(parent)
         self.store = store
+        self.focus_enabled = True
+        self._focus_overlay_open = False
         self.layout_mode = LayoutMode.WIDE
         self.current_route = Route.DASHBOARD
         self.active_dashboard_filter = None
@@ -70,6 +72,11 @@ class V10Shell(QMainWindow):
         self.new_button.setProperty("variant", "primary")
         self.new_button.clicked.connect(self.show_quick_capture)
         toolbar.addWidget(self.search_button); toolbar.addWidget(self.new_button)
+        self.focus_button = QPushButton("Wochenfokus")
+        self.focus_button.setObjectName("toggle_weekly_focus")
+        self.focus_button.setCheckable(True)
+        self.focus_button.clicked.connect(self._toggle_focus)
+        toolbar.addWidget(self.focus_button)
         center_layout.addLayout(toolbar)
         self.pages = QStackedWidget()
         self.pages.setObjectName("v10Pages")
@@ -83,6 +90,7 @@ class V10Shell(QMainWindow):
         self.context_stack.setMinimumWidth(300)
         self.weekly_focus = WeeklyFocusPanel(store)
         self.weekly_focus.review_requested.connect(lambda: self.navigate(Route.WEEKLY_REVIEW))
+        self.weekly_focus.collapse_requested.connect(self._collapse_focus)
         self.detail_panel = DetailPanel(store)
         self.context_stack.addWidget(self.weekly_focus)
         self.context_stack.addWidget(self.detail_panel)
@@ -101,6 +109,7 @@ class V10Shell(QMainWindow):
         self.shortcut_controller = ShortcutController(self)
         self.shortcut_controller.dispatched.connect(self._dispatch_shortcut)
         settings = SettingsRepository(self.store.repository.db_path.parent / "settings.json").load()
+        self.focus_enabled = settings.weekly_focus_visible
         self._apply_settings(settings)
         self.navigate(Route.DASHBOARD)
         from .notifications import ReminderScheduler, DueReminderDialog
@@ -212,15 +221,40 @@ class V10Shell(QMainWindow):
 
     def _show_detail(self, _task_id):
         self.context_stack.setCurrentWidget(self.detail_panel)
-        self.context_stack.show()
-        if self.layout_mode is LayoutMode.OVERLAY:
-            self.center.hide()
+        self._update_context_layout()
 
     def _close_detail(self):
         if not self.detail_panel.flush(): return
         self.context_stack.setCurrentWidget(self.weekly_focus)
-        self.center.show()
-        self.context_stack.setVisible(self.layout_mode is not LayoutMode.OVERLAY)
+        self._update_context_layout()
+
+    def _toggle_focus(self):
+        self.focus_enabled = self.focus_button.isChecked()
+        self._focus_overlay_open = self.focus_enabled and self.layout_mode is LayoutMode.OVERLAY
+        self._save_focus_preference()
+        self._update_context_layout()
+
+    def _collapse_focus(self):
+        self.focus_enabled = False
+        self._focus_overlay_open = False
+        self._save_focus_preference()
+        self._update_context_layout()
+
+    def _save_focus_preference(self):
+        repository = SettingsRepository(self.store.repository.db_path.parent / "settings.json")
+        try:
+            repository.save(replace(repository.load(), weekly_focus_visible=self.focus_enabled))
+        except OSError as error:
+            self.statusBar().showMessage(f"Ansicht konnte nicht gespeichert werden: {error}", 10000)
+
+    def _update_context_layout(self):
+        overlay = self.layout_mode is LayoutMode.OVERLAY
+        detail_open = self.context_stack.currentWidget() is self.detail_panel
+        focus_open = self.focus_enabled and (not overlay or self._focus_overlay_open)
+        self.context_stack.setVisible(detail_open or focus_open)
+        self.center.setVisible(not overlay or not (detail_open or focus_open))
+        self.focus_button.setChecked(focus_open)
+        self.focus_button.setToolTip("Wochenfokus ausblenden" if focus_open else "Wochenfokus einblenden")
 
     def closeEvent(self, event):
         if self.detail_panel.flush():
@@ -313,7 +347,7 @@ class V10Shell(QMainWindow):
             self.context_stack.setMaximumWidth(16777215)
         else:
             self.context_stack.setFixedWidth(340 if mode is LayoutMode.WIDE else 300)
-        detail_open = self.context_stack.currentWidget() is self.detail_panel
-        self.context_stack.setVisible(mode is not LayoutMode.OVERLAY or detail_open)
-        self.center.setVisible(mode is not LayoutMode.OVERLAY or not detail_open)
+        self.focus_button.setText("Fokus" if mode is LayoutMode.OVERLAY else "Wochenfokus")
+        if mode is not LayoutMode.OVERLAY: self._focus_overlay_open = False
+        self._update_context_layout()
         super().resizeEvent(event)

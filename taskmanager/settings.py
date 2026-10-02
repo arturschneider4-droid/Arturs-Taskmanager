@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 import json
 from pathlib import Path
 import os
@@ -18,6 +18,7 @@ class AppSettings:
     work_week: str = "mon-fri"
     density: str = "compact"
     backup_directory: str = ""
+    weekly_focus_visible: bool = True
 
 
 class SettingsRepository:
@@ -104,7 +105,7 @@ class SettingsView(QWidget):
 
     def _save(self):
         old = self.repository.load()
-        settings = AppSettings(old.start_view, self.autostart.isChecked(), self.reminder.value(), old.work_week, self.density.currentText(), old.backup_directory)
+        settings = replace(old, autostart=self.autostart.isChecked(), default_reminder_minutes=self.reminder.value(), density=self.density.currentText())
         try:
             self.autostart_adapter.set_enabled(settings.autostart)
             self.repository.save(settings)

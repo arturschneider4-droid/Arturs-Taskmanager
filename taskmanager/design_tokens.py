@@ -64,7 +64,7 @@ def build_stylesheet(tokens: DesignTokens, density: Density) -> str:
     QPushButton[variant="primary"]:hover {{ background: {tokens.accent_hover}; }}
     QWidget[state="loading"] {{ color: {tokens.text_muted}; }}
     QWidget[state="error"] {{ color: {tokens.risk}; border-color: {tokens.risk}; }}
-    QWidget[role="task-row"] {{ min-height: {metrics.task_row_height}px; background: {tokens.surface}; border-bottom: 1px solid {tokens.border}; }}
+    QWidget[role="task-row"] {{ background: {tokens.surface}; border-bottom: 1px solid {tokens.border}; }}
     QPushButton[role="metric-card"] {{ min-height: 108px; text-align: left; background: {tokens.surface}; border: 1px solid {tokens.border}; border-radius: 12px; }}
     QPushButton[role="metric-card"]:hover {{ border: 1px solid {tokens.accent}; background: #F3FBFA; }}
     QLabel#metricValue {{ font-size: 28px; font-weight: 700; color: {tokens.navigation}; }}

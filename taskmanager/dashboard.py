@@ -7,7 +7,7 @@ from pathlib import Path
 import sqlite3
 
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtWidgets import QCheckBox, QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from .components import MetricCard, PrimaryButton
 from .repositories import DashboardRepository
@@ -134,6 +134,7 @@ class ExecutiveDashboard(QWidget):
 
 class WeeklyFocusPanel(QWidget):
     review_requested = Signal()
+    collapse_requested = Signal()
 
     def __init__(self, store: TaskStore, today: date | None = None, parent=None):
         super().__init__(parent)
@@ -143,7 +144,13 @@ class WeeklyFocusPanel(QWidget):
         self.today = today or date.today()
         self.service = DashboardService(store.repository.db_path)
         layout = QVBoxLayout(self)
-        heading=QLabel("Wochenfokus"); heading.setObjectName("laneTitle"); layout.addWidget(heading)
+        header = QHBoxLayout()
+        heading=QLabel("Wochenfokus"); heading.setObjectName("laneTitle")
+        header.addWidget(heading, 1)
+        collapse = QPushButton("›"); collapse.setObjectName("collapse_weekly_focus")
+        collapse.setToolTip("Wochenfokus einklappen"); collapse.setAccessibleName("Wochenfokus einklappen")
+        collapse.clicked.connect(self.collapse_requested)
+        header.addWidget(collapse); layout.addLayout(header)
         self.goals_label = QLabel()
         self.goal_checks = []
         for index in range(3):

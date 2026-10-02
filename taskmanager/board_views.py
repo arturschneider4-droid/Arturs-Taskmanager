@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import date
 
-from PySide6.QtCore import Qt, Signal, QMimeData, QSize
+from PySide6.QtCore import Qt, Signal, QMimeData, QSize, QTimer
 from PySide6.QtGui import QDrag
-from PySide6.QtWidgets import QAbstractItemView, QGridLayout, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QMenu, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QAbstractItemView, QFrame, QGridLayout, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QMenu, QVBoxLayout, QWidget
 
 from .repositories import QuerySpec
 from .task_store import SaveTask, TaskStore
@@ -12,6 +13,37 @@ from .task_store import SaveTask, TaskStore
 
 STATUSES = ("Offen", "In Arbeit", "Erledigt")
 PRIORITIES = ("important_urgent", "important_not_urgent", "not_important_urgent", "not_important_not_urgent")
+
+
+PRIORITY_STYLES = {
+    "important_urgent": ("Wichtig & dringend", "#A3293D", "#FCECEF"),
+    "important_not_urgent": ("Wichtig", "#175A9B", "#EAF2FC"),
+    "not_important_urgent": ("Dringend", "#885000", "#FFF3D6"),
+    "not_important_not_urgent": ("Später", "#52616D", "#EDF1F4"),
+}
+
+
+class KanbanCard(QFrame):
+    def __init__(self, task, parent=None):
+        super().__init__(parent)
+        label, color, background = PRIORITY_STYLES[task.priority]
+        self.setObjectName("kanbanCard")
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        # The list handles clicking, keyboard selection and dragging.
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self.setStyleSheet(f"QFrame#kanbanCard {{ background: white; border: 1px solid #DDE4E9; border-left: 5px solid {color}; border-radius: 7px; }} QLabel {{ border: 0; background: transparent; }}")
+        layout = QVBoxLayout(self); layout.setContentsMargins(12, 10, 10, 10); layout.setSpacing(7)
+        title = QLabel(("★ " if task.is_top_three else "") + task.title)
+        title.setWordWrap(True); title.setTextFormat(Qt.PlainText)
+        layout.addWidget(title)
+        deadline = "Deadline: " + task.deadline.strftime("%d.%m.%Y") if task.deadline else "Keine Deadline"
+        if task.deadline and task.deadline < date.today() and task.status != "Erledigt": deadline += " · überfällig"
+        self.deadline_label = QLabel(deadline); self.deadline_label.setWordWrap(True)
+        layout.addWidget(self.deadline_label)
+        badge = QLabel(label); badge.setObjectName("kanban_priority"); badge.setWordWrap(True)
+        badge.setStyleSheet(f"color: {color}; background: {background}; border-radius: 4px; padding: 4px 6px; font-weight: 600;")
+        layout.addWidget(badge)
+        self.setAccessibleName(f"{task.title}. {deadline}. {label}")
 
 
 class BoardLane(QListWidget):
@@ -28,10 +60,25 @@ class BoardLane(QListWidget):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setSpacing(8)
         self.setObjectName("boardLane")
+        if board.field == "status":
+            self.setStyleSheet("QListWidget#boardLane::item { padding: 0px; border: 0px; background: transparent; }")
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._menu)
         self.itemClicked.connect(lambda item: board.task_selected.emit(item.data(Qt.UserRole)))
         self.itemActivated.connect(lambda item: board.task_selected.emit(item.data(Qt.UserRole)))
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        QTimer.singleShot(0, self._size_cards)
+
+    def _size_cards(self):
+        for index in range(self.count()):
+            item = self.item(index); card = self.itemWidget(item)
+            if card is not None:
+                width = max(50, self.visualItemRect(item).width())
+                height = max(132, card.layout().totalHeightForWidth(width - 6) + 4)
+                size = QSize(width, height)
+                if item.sizeHint() != size: item.setSizeHint(size)
 
     def startDrag(self, actions):
         item = self.currentItem()
@@ -110,7 +157,14 @@ class BoardView(QWidget):
                 card.setData(Qt.UserRole, item.id)
                 card.setToolTip(f"{item.title}\n{item.status} · {item.project_name or 'Ohne Themengebiet'}\nZiehen zum Verschieben · Rechtsklick für Aktionen")
                 card.setSizeHint(QSize(120, 76))
-                self.lane_widgets[lane].addItem(card)
+                listing = self.lane_widgets[lane]
+                listing.addItem(card)
+                if self.field == "status":
+                    widget = KanbanCard(item)
+                    card.setToolTip(widget.accessibleName() + "\nZiehen zum Verschieben · Rechtsklick für Aktionen")
+                    card.setData(Qt.AccessibleTextRole, widget.accessibleName())
+                    listing.setItemWidget(card, widget)
+                    QTimer.singleShot(0, listing._size_cards)
         for lane, listing in self.lane_widgets.items():
             self.lane_labels[lane].setText(f"{self.label_for(lane)} · {listing.count()}")
 
