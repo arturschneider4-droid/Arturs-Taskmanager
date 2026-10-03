@@ -155,7 +155,7 @@ class V10Shell(QMainWindow):
         if route is Route.CALENDAR: return CalendarView(self.store)
         if route is Route.SETTINGS: return SettingsView(SettingsRepository(self.store.repository.db_path.parent / "settings.json"), WindowsAutostartAdapter())
         if route is Route.HELP: return HelpView()
-        if route in {Route.TASKS, Route.ALL_TASKS}: return TaskListView(self.store)
+        if route in {Route.TASKS, Route.ALL_TASKS}: return TaskListView(self.store, theme_filter=route is Route.TASKS)
         return RoutePage(route)
 
     def navigate(self, route: Route) -> None:

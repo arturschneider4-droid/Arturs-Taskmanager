@@ -6,7 +6,7 @@ from enum import Enum
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QCursor
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMenu, QPushButton, QScrollArea, QToolButton, QVBoxLayout, QWidget, QSizePolicy, QLayout
+from PySide6.QtWidgets import QComboBox, QFrame, QHBoxLayout, QLabel, QMenu, QPushButton, QScrollArea, QToolButton, QVBoxLayout, QWidget, QSizePolicy, QLayout
 
 from .repositories import QuerySpec, TaskSummary
 from .task_model import ControlMode
@@ -74,7 +74,7 @@ class TaskListView(QWidget):
     task_selected = Signal(int)
     action_performed = Signal(int, object)
 
-    def __init__(self, store: TaskStore, today: date | None = None, parent=None):
+    def __init__(self, store: TaskStore, today: date | None = None, parent=None, theme_filter=False):
         super().__init__(parent)
         self.store = store
         self.today = today or date.today()
@@ -87,6 +87,18 @@ class TaskListView(QWidget):
         self._visible_count = 20
         self._menus = {}
         layout = QVBoxLayout(self)
+        self.theme_filter = None
+        if theme_filter:
+            filters = QHBoxLayout()
+            label = QLabel("Themengebiet:")
+            self.theme_filter = QComboBox()
+            self.theme_filter.setObjectName("theme_filter")
+            self.theme_filter.setAccessibleName("Nach Themengebiet filtern")
+            self.theme_filter.setMinimumWidth(180)
+            label.setBuddy(self.theme_filter)
+            filters.addWidget(label); filters.addWidget(self.theme_filter, 1)
+            layout.addLayout(filters)
+            self.theme_filter.currentIndexChanged.connect(self._filter_theme)
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.content = QWidget()
@@ -102,7 +114,36 @@ class TaskListView(QWidget):
         self.query_spec = spec
         self.refresh()
 
+    def _filter_theme(self):
+        value = self.theme_filter.currentData()
+        self.query_spec = replace(self.query_spec, project_id=value if isinstance(value, int) else None,
+                                  without_project=value == "unassigned")
+        self._visible_count = 20
+        self.refresh()
+
+    def _refresh_themes(self):
+        if self.theme_filter is None:
+            return
+        selected = "unassigned" if self.query_spec.without_project else self.query_spec.project_id
+        connection = self.store.repository._connect()
+        try:
+            projects = connection.execute("SELECT id,name FROM projects ORDER BY name COLLATE NOCASE").fetchall()
+        finally:
+            connection.close()
+        self.theme_filter.blockSignals(True)
+        self.theme_filter.clear()
+        self.theme_filter.addItem("Alle Themen", None)
+        self.theme_filter.addItem("Ohne Themengebiet", "unassigned")
+        for project in projects:
+            self.theme_filter.addItem(project["name"], project["id"])
+        index = self.theme_filter.findData(selected)
+        self.theme_filter.setCurrentIndex(max(0, index))
+        self.theme_filter.blockSignals(False)
+        if index < 0:
+            self.query_spec = replace(self.query_spec, project_id=None, without_project=False)
+
     def refresh(self) -> None:
+        self._refresh_themes()
         scroll = self.scroll_area.verticalScrollBar().value()
         selected = self.selected_task_id
         while self.rows_layout.count():

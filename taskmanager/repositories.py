@@ -21,6 +21,7 @@ class QuerySpec:
     limit: int = 1000
     metric_filter: str | None = None
     today: date | None = None
+    without_project: bool = False
 
 
 @dataclass(frozen=True)
@@ -227,6 +228,8 @@ class TaskRepository:
             sql += " AND (LOWER(t.title) LIKE ? OR LOWER(t.description) LIKE ?)"
             value = f"%{spec.search.lower()}%"
             params.extend((value, value))
+        if spec.without_project:
+            sql += " AND t.project_id IS NULL"
         if spec.project_id is not None:
             sql += " AND t.project_id=?"
             params.append(spec.project_id)
