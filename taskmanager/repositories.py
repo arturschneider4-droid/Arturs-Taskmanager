@@ -22,6 +22,7 @@ class QuerySpec:
     metric_filter: str | None = None
     today: date | None = None
     without_project: bool = False
+    deadline_filter: str = ""
 
 
 @dataclass(frozen=True)
@@ -223,6 +224,16 @@ class TaskRepository:
                 "week_progress": ("status='Erledigt' AND date(updated_at) BETWEEN ? AND ?", ((today-timedelta(days=today.weekday())).isoformat(), (today+timedelta(days=6-today.weekday())).isoformat())),
             }
             clause, values = filters[spec.metric_filter]
+            sql += " AND (" + clause + ")"; params.extend(values)
+        if spec.deadline_filter:
+            today = spec.today or date.today()
+            deadline_clauses = {
+                "overdue": ("t.deadline<? AND t.status!='Erledigt'", (today.isoformat(),)),
+                "today": ("t.deadline=?", (today.isoformat(),)),
+                "next7": ("t.deadline BETWEEN ? AND ?", (today.isoformat(), (today + timedelta(days=6)).isoformat())),
+                "none": ("t.deadline IS NULL", ()),
+            }
+            clause, values = deadline_clauses[spec.deadline_filter]
             sql += " AND (" + clause + ")"; params.extend(values)
         if spec.search:
             sql += " AND (LOWER(t.title) LIKE ? OR LOWER(t.description) LIKE ?)"

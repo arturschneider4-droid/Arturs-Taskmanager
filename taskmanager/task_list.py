@@ -87,6 +87,7 @@ class TaskListView(QWidget):
         self._visible_count = 20
         self._menus = {}
         layout = QVBoxLayout(self)
+        self.saved_filters = None
         self.theme_filter = None
         if theme_filter:
             filters = QHBoxLayout()
@@ -99,6 +100,10 @@ class TaskListView(QWidget):
             filters.addWidget(label); filters.addWidget(self.theme_filter, 1)
             layout.addLayout(filters)
             self.theme_filter.currentIndexChanged.connect(self._filter_theme)
+        if theme_filter:
+            from .saved_filters import SavedFilters
+            self.saved_filters = SavedFilters(self)
+            layout.addWidget(self.saved_filters)
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.content = QWidget()
@@ -144,6 +149,7 @@ class TaskListView(QWidget):
 
     def refresh(self) -> None:
         self._refresh_themes()
+        if self.saved_filters is not None: self.saved_filters.sync()
         scroll = self.scroll_area.verticalScrollBar().value()
         selected = self.selected_task_id
         while self.rows_layout.count():
