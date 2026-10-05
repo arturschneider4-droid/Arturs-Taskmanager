@@ -5,9 +5,9 @@ def test_design_tokens_define_professional_visual_contract():
     tokens = DesignTokens()
     assert tokens.font_family == '"Segoe UI Variable", "Segoe UI", sans-serif'
     assert tokens.accent == "#0F8F8A"
-    assert tokens.navigation == "#172A3A"
+    assert tokens.navigation == "#172C36"
     assert tokens.risk == "#C53B4B"
-    assert tokens.canvas == "#F6F8FA"
+    assert tokens.canvas == "#F4F6F8"
     assert tokens.spacing == (4, 8, 12, 16, 24, 32)
     assert tokens.radius == (4, 8, 12)
 

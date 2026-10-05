@@ -4,7 +4,7 @@ from enum import Enum
 
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QIcon, QPainter, QColor
-from PySide6.QtWidgets import QButtonGroup, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QButtonGroup, QPushButton, QVBoxLayout, QWidget
 
 from .design_tokens import IconRegistry
 
@@ -57,6 +57,9 @@ class Navigation(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 20, 12, 20)
         layout.setSpacing(4)
+        self.brand = QLabel("ARTUR / WORK")
+        self.brand.setObjectName("navBrand")
+        layout.addWidget(self.brand)
         icons = IconRegistry()
         for route in Route:
             icon_name, label = ROUTE_LABELS[route]
@@ -87,6 +90,7 @@ class Navigation(QWidget):
             button.style().polish(button)
 
     def set_compact(self, compact: bool) -> None:
+        self.brand.setVisible(not compact)
         for route, button in self._buttons.items():
             button.setText("" if compact else ROUTE_LABELS[route][1])
             button.setToolTip(ROUTE_LABELS[route][1] if compact else "")

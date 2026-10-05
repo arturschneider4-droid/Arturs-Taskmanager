@@ -40,15 +40,21 @@ class ListTaskRow(QFrame):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         layout = QVBoxLayout(self)
         layout.setSizeConstraint(QLayout.SetMinimumSize)
+        layout.setContentsMargins(16, 10, 16, 10)
+        layout.setSpacing(3)
         title_row = QHBoxLayout(); meta_row = QHBoxLayout()
         self.title_button = QPushButton(task.title)
+        self.title_button.setObjectName("taskTitle")
         self.title_button.setAccessibleName(f"Aufgabe öffnen: {task.title}")
         self.planning_label = QLabel(f"Geplant: {task.planning_date.strftime('%d.%m.%Y')}" if task.planning_date else "Nicht geplant")
         self.deadline_label = QLabel(f"Frist: {task.deadline.strftime('%d.%m.%Y')}" if task.deadline else "")
+        self.planning_label.setObjectName("taskMeta")
+        self.deadline_label.setObjectName("taskDeadline")
         self.title_button.setToolTip(task.title)
         self.title_button.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
         title_row.addWidget(self.title_button, 1)
         self.status_label = QLabel(task.status); self.status_label.setProperty("role", "chip")
+        self.status_label.setProperty("status", task.status)
         title_row.addWidget(self.status_label)
         meta_row.addWidget(self.planning_label); meta_row.addWidget(self.deadline_label); meta_row.addStretch(1)
         layout.addLayout(title_row); layout.addLayout(meta_row)
@@ -65,7 +71,7 @@ class ListTaskRow(QFrame):
     def resizeEvent(self, event):
         compact = event.size().width() < 850
         for action, button in self.buttons.items():
-            button.setVisible(not compact or action in (RowAction.COMPLETE, RowAction.MORE))
+            button.setVisible(action in (RowAction.COMPLETE, RowAction.MORE))
         self.title_button.setText(self.title_button.fontMetrics().elidedText(self.task.title, Qt.ElideRight, max(50,self.title_button.width()-30)))
         super().resizeEvent(event)
 
@@ -90,7 +96,9 @@ class TaskListView(QWidget):
         self.saved_filters = None
         self.theme_filter = None
         if theme_filter:
-            filters = QHBoxLayout()
+            self.theme_filter_container = QWidget()
+            filters = QHBoxLayout(self.theme_filter_container)
+            filters.setContentsMargins(0, 0, 0, 0)
             label = QLabel("Themengebiet:")
             self.theme_filter = QComboBox()
             self.theme_filter.setObjectName("theme_filter")
@@ -98,7 +106,8 @@ class TaskListView(QWidget):
             self.theme_filter.setMinimumWidth(180)
             label.setBuddy(self.theme_filter)
             filters.addWidget(label); filters.addWidget(self.theme_filter, 1)
-            layout.addLayout(filters)
+            layout.addWidget(self.theme_filter_container)
+            self.theme_filter_container.hide()
             self.theme_filter.currentIndexChanged.connect(self._filter_theme)
         if theme_filter:
             from .saved_filters import SavedFilters
@@ -107,8 +116,12 @@ class TaskListView(QWidget):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.content = QWidget()
+        self.content.setObjectName("taskListSurface")
+        self.scroll_area.setObjectName("taskListScroll")
         self.content.setMinimumHeight(0)
         self.rows_layout = QVBoxLayout(self.content)
+        self.rows_layout.setContentsMargins(0, 0, 0, 0)
+        self.rows_layout.setSpacing(1)
         self.rows_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.scroll_area.setWidget(self.content)
         layout.addWidget(self.scroll_area)

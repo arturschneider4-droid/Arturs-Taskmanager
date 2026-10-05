@@ -17,11 +17,19 @@ class SavedFilters(QWidget):
         with self.repository._connect() as c:
             c.execute('CREATE TABLE IF NOT EXISTS saved_task_views (name TEXT PRIMARY KEY, filters TEXT NOT NULL)')
         root = QVBoxLayout(self); root.setContentsMargins(0, 0, 0, 0)
-        row = QHBoxLayout(); root.addLayout(row)
+        self.controls = QWidget()
+        row = QHBoxLayout(self.controls); row.setContentsMargins(0, 0, 0, 0)
+        root.addWidget(self.controls)
+        self.controls.hide()
         self.status = self._combo('Status', [('Alle Status', None), ('Offen', 'Offen'), ('In Arbeit', 'In Arbeit'), ('Erledigt', 'Erledigt')], row)
         self.priority = self._combo('Eisenhower-Kategorie', [('Alle Kategorien', None), ('Wichtig & dringend', 'important_urgent'), ('Wichtig', 'important_not_urgent'), ('Dringend', 'not_important_urgent'), ('Später', 'not_important_not_urgent')], row)
         self.deadline = self._combo('Deadline', [('Alle Deadlines', ''), ('Überfällig', 'overdue'), ('Heute', 'today'), ('Nächste 7 Tage', 'next7'), ('Ohne Deadline', 'none')], row)
         row = QHBoxLayout(); root.addLayout(row)
+        self.toggle = QPushButton("Filter")
+        self.toggle.setCheckable(True)
+        self.toggle.setAccessibleName("Filter ein- oder ausblenden")
+        self.toggle.toggled.connect(self._toggle_controls)
+        row.addWidget(self.toggle)
         self.views = QComboBox(); self.views.setAccessibleName('Gespeicherte Filteransichten')
         self.views.setMinimumWidth(120); row.addWidget(self.views, 1)
         self.save = QPushButton('Speichern …'); self.save.clicked.connect(self._save_dialog); row.addWidget(self.save)
@@ -31,6 +39,10 @@ class SavedFilters(QWidget):
         self._reload()
         self.views.currentIndexChanged.connect(self._load_selected)
         for combo in (self.status, self.priority, self.deadline): combo.currentIndexChanged.connect(self._changed)
+
+    def _toggle_controls(self, visible):
+        self.controls.setVisible(visible)
+        self.owner.theme_filter_container.setVisible(visible)
 
     @staticmethod
     def _combo(name, items, layout):
@@ -50,6 +62,8 @@ class SavedFilters(QWidget):
 
     def sync(self):
         spec = self.owner.query_spec
+        count = sum(bool(value) for value in self._snapshot().values())
+        self.toggle.setText(f"Filter · {count}" if count else "Filter")
         for combo, value in ((self.status, spec.status), (self.priority, spec.priority), (self.deadline, spec.deadline_filter)):
             combo.blockSignals(True); combo.setCurrentIndex(max(0, combo.findData(value))); combo.blockSignals(False)
         if self.views.currentData() is not None:
@@ -60,7 +74,7 @@ class SavedFilters(QWidget):
         return {key: getattr(spec, key) for key in ('project_id', 'without_project', 'status', 'priority', 'deadline_filter')}
 
     def _reload(self, select=None):
-        self.views.blockSignals(True); self.views.clear(); self.views.addItem('Gespeicherte Ansicht wählen', None)
+        self.views.blockSignals(True); self.views.clear(); self.views.addItem('Ansicht wählen', None)
         with self.repository._connect() as c:
             for row in c.execute('SELECT name,filters FROM saved_task_views ORDER BY name COLLATE NOCASE'):
                 self.views.addItem(row['name'], json.loads(row['filters']))

@@ -46,3 +46,19 @@ def test_deadline_filter_is_relative_and_combines_with_theme(v10_database):
     assert [t.title for t in repo.query(QuerySpec(deadline_filter='today', today=date(2026,10,4)))] == ['Heute']
     assert [t.title for t in repo.query(QuerySpec(deadline_filter='overdue', today=date(2026,10,4)))] == ['Gestern']
     assert [t.title for t in repo.query(QuerySpec(deadline_filter='none'))] == ['Ohne']
+
+
+def test_filters_can_fold_without_changing_results(qtbot, v10_database):
+    repo = TaskRepository(v10_database)
+    repo.save(TaskDraft(title='Offen', status='Offen'))
+    repo.save(TaskDraft(title='Fertig', status='Erledigt'))
+    view = TaskListView(TaskStore(repo), theme_filter=True); qtbot.addWidget(view); view.show()
+    panel = view.saved_filters
+    assert hasattr(panel, 'toggle')
+    panel.toggle.click()
+    assert view.theme_filter.isVisible() and panel.status.isVisible()
+    panel.status.setCurrentText('Offen')
+    panel.toggle.click()
+    assert not panel.status.isVisible()
+    assert [r.task.title for r in view._rows] == ['Offen']
+    assert '1' in panel.toggle.text()

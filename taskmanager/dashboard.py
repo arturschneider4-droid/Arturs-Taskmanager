@@ -7,7 +7,7 @@ from pathlib import Path
 import sqlite3
 
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QProgressBar, QCheckBox, QHBoxLayout, QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from .components import MetricCard, PrimaryButton
 from .repositories import DashboardRepository
@@ -161,9 +161,14 @@ class WeeklyFocusPanel(QWidget):
         self.delegation_label = QLabel()
         self.follow_up_label = QLabel()
         self.progress_label = QLabel()
-        for widget in (self.goals_label, self.deadline_label, self.delegation_label, self.follow_up_label, self.progress_label):
-            widget.setWordWrap(True)
-            layout.addWidget(widget)
+        layout.setContentsMargins(22, 18, 22, 20)
+        self.goals_label.setWordWrap(True); self.goals_label.setObjectName("taskMeta")
+        layout.addWidget(self.goals_label)
+        for caption, widget in (("NÄCHSTE DEADLINE", self.deadline_label), ("ÄLTESTE DELEGATION", self.delegation_label), ("NÄCHSTE WIEDERVORLAGE", self.follow_up_label)):
+            label = QLabel(caption); label.setObjectName("focusCaption"); layout.addWidget(label)
+            widget.setWordWrap(True); widget.setObjectName("focusValue"); layout.addWidget(widget)
+        self.progress_label.setObjectName("focusCaption"); layout.addWidget(self.progress_label)
+        self.progress_bar = QProgressBar(); self.progress_bar.setTextVisible(False); layout.addWidget(self.progress_bar)
         layout.addStretch(1)
         self.review_button = PrimaryButton("Wochenreview starten")
         self.review_button.setObjectName("weekly_review_start")
@@ -181,10 +186,11 @@ class WeeklyFocusPanel(QWidget):
                 check.setChecked(snapshot.goals[index].done)
         self.goals_label.setVisible(not snapshot.goals)
         self.goals_label.setText("\n".join(("✓ " if goal.done else "○ ") + goal.title for goal in snapshot.goals) or "Noch keine Wochenziele")
-        self.deadline_label.setText("Nächste Deadline: " + (snapshot.next_deadline or "–"))
-        self.delegation_label.setText("Älteste Delegation: " + (snapshot.oldest_delegation or "–"))
-        self.follow_up_label.setText("Nächste Wiedervorlage: " + (snapshot.next_follow_up or "–"))
-        self.progress_label.setText(f"Wochenfortschritt: {snapshot.progress_percent} %")
+        self.deadline_label.setText(snapshot.next_deadline or "Keine anstehende Deadline")
+        self.delegation_label.setText(snapshot.oldest_delegation or "Keine offene Delegation")
+        self.follow_up_label.setText(snapshot.next_follow_up or "Keine Wiedervorlage")
+        self.progress_label.setText(f"WOCHENFORTSCHRITT   {snapshot.progress_percent} %")
+        self.progress_bar.setValue(snapshot.progress_percent)
 
     def _on_change(self, change: ChangeSet) -> None:
         if "dashboard" in change.domains:
