@@ -19,6 +19,8 @@ class MigrationResult:
 
 
 TASK_COLUMNS = {
+    "completed_at": "TEXT",
+    "archived_at": "TEXT",
     "planning_date": "TEXT",
     "planning_time": "TEXT",
     "deadline": "TEXT",
@@ -62,6 +64,8 @@ def migrate_to_v10(db_path: Path, backup_dir: Path) -> MigrationResult:
             if name not in columns:
                 connection.execute(f"ALTER TABLE tasks ADD COLUMN {name} {declaration}")
         connection.execute("UPDATE tasks SET deadline=due_date WHERE deadline IS NULL AND due_date IS NOT NULL")
+        # Older releases only recorded the last edit, not the completion event.
+        connection.execute("UPDATE tasks SET completed_at=COALESCE(updated_at,created_at) WHERE status='Erledigt' AND completed_at IS NULL")
         connection.executescript("""
         CREATE TABLE IF NOT EXISTS schema_versions(version INTEGER PRIMARY KEY,applied_at TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS weekly_goals(id INTEGER PRIMARY KEY AUTOINCREMENT,year INTEGER NOT NULL,week INTEGER NOT NULL,title TEXT NOT NULL,position INTEGER NOT NULL CHECK(position BETWEEN 1 AND 3),done INTEGER NOT NULL DEFAULT 0 CHECK(done IN (0,1)),UNIQUE(year,week,position));
@@ -91,4 +95,3 @@ def migrate_to_v10(db_path: Path, backup_dir: Path) -> MigrationResult:
             except sqlite3.Error:
                 pass
     return MigrationResult(from_version=9, to_version=10, backup_path=backup_path)
-

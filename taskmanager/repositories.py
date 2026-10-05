@@ -23,6 +23,7 @@ class QuerySpec:
     today: date | None = None
     without_project: bool = False
     deadline_filter: str = ""
+    archived: bool | None = False
 
 
 @dataclass(frozen=True)
@@ -38,6 +39,7 @@ class TaskSummary:
     responsible_party: str | None
     is_top_three: bool
     follow_up_date: date | None = None
+    archived_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -71,7 +73,7 @@ class TaskRepository:
         connection = self._connect()
         try:
             connection.execute("BEGIN IMMEDIATE")
-            previous = connection.execute("SELECT status FROM tasks WHERE id=?", (task_id,)).fetchone() if task_id is not None else None
+            previous = connection.execute("SELECT status,completed_at,archived_at FROM tasks WHERE id=?", (task_id,)).fetchone() if task_id is not None else None
             if draft.is_top_three:
                 sql = "SELECT COUNT(*) FROM tasks WHERE is_top_three=1 AND status!='Erledigt'"
                 params = ()
@@ -107,6 +109,11 @@ class TaskRepository:
                 """, values + (task_id,))
                 connection.execute("DELETE FROM subtasks WHERE task_id=?", (task_id,))
                 connection.execute("DELETE FROM task_people WHERE task_id=?", (task_id,))
+            completed_at = archived_at = None
+            if draft.status == "Erledigt":
+                completed_at = (previous["completed_at"] or now) if previous and previous["status"] == "Erledigt" else now
+                archived_at = previous["archived_at"] if previous and previous["status"] == "Erledigt" else None
+            connection.execute("UPDATE tasks SET completed_at=?,archived_at=? WHERE id=?", (completed_at, archived_at, task_id))
             for title, done in draft.subtasks:
                 if title.strip():
                     connection.execute("INSERT INTO subtasks(task_id,title,done) VALUES(?,?,?)", (task_id, title.strip(), int(done)))
@@ -122,7 +129,7 @@ class TaskRepository:
                 offset = target - anchor
                 row = dict(connection.execute("SELECT * FROM tasks WHERE id=?", (task_id,)).fetchone())
                 row.pop("id")
-                row.update(status="Offen", is_top_three=0, created_at=now, updated_at=now)
+                row.update(status="Offen", is_top_three=0, created_at=now, updated_at=now, completed_at=None, archived_at=None)
                 row["planning_date"] = target.isoformat()
                 for key in ("deadline", "due_date", "follow_up_date"):
                     if row.get(key): row[key] = (date.fromisoformat(row[key]) + offset).isoformat()
@@ -166,7 +173,25 @@ class TaskRepository:
             follow_up_date=date.fromisoformat(row["follow_up_date"]) if row["follow_up_date"] else None,
             people_tags=people,
         )
-        return TaskRecord(task_id, draft, datetime.fromisoformat(row["created_at"]), datetime.fromisoformat(row["updated_at"]), row["project_name"])
+        return TaskRecord(task_id, draft, datetime.fromisoformat(row["created_at"]), datetime.fromisoformat(row["updated_at"]), row["project_name"],
+                          datetime.fromisoformat(row["completed_at"]) if row["completed_at"] else None,
+                          datetime.fromisoformat(row["archived_at"]) if row["archived_at"] else None)
+
+    def archive_completed(self, now: datetime | None = None) -> frozenset[int]:
+        now = now or datetime.now()
+        cutoff = (now - timedelta(days=7)).isoformat(timespec="seconds")
+        connection = self._connect()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            rows = connection.execute(
+                "UPDATE tasks SET archived_at=? WHERE status='Erledigt' AND archived_at IS NULL "
+                "AND datetime(completed_at)<=datetime(?) RETURNING id",
+                (now.isoformat(timespec="seconds"), cutoff),
+            ).fetchall()
+            connection.commit()
+            return frozenset(row[0] for row in rows)
+        finally:
+            connection.close()
 
     def delete(self, task_id: int) -> None:
         connection = self._connect()
@@ -208,9 +233,11 @@ class TaskRepository:
         spec = spec or QuerySpec()
         connection = self._connect()
         sql = """SELECT t.id,t.title,p.name project_name,t.priority,t.status,t.planning_date,
-                 t.deadline,t.control_mode,t.responsible_party,t.is_top_three,t.follow_up_date
+                 t.deadline,t.control_mode,t.responsible_party,t.is_top_three,t.follow_up_date,t.archived_at
                  FROM tasks t LEFT JOIN projects p ON p.id=t.project_id WHERE 1=1"""
         params = []
+        if spec.archived is not None:
+            sql += " AND t.archived_at IS " + ("NOT NULL" if spec.archived else "NULL")
         if spec.metric_filter:
             today = spec.today or date.today()
             filters = {
@@ -271,6 +298,7 @@ class TaskRepository:
             control_mode=ControlMode(row["control_mode"]), responsible_party=row["responsible_party"],
             is_top_three=bool(row["is_top_three"]),
             follow_up_date=date.fromisoformat(row["follow_up_date"]) if row["follow_up_date"] else None,
+            archived_at=datetime.fromisoformat(row["archived_at"]) if row["archived_at"] else None,
         ) for row in rows]
 
 

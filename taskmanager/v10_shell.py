@@ -45,6 +45,7 @@ class V10Shell(QMainWindow):
     def __init__(self, store: TaskStore, parent=None):
         super().__init__(parent)
         self.store = store
+        self.store.archive_failed.connect(lambda message: self.statusBar().showMessage(message, 15000))
         self.focus_enabled = True
         self._focus_overlay_open = False
         self.layout_mode = LayoutMode.WIDE
@@ -195,15 +196,16 @@ class V10Shell(QMainWindow):
 
     def _after_restore(self):
         from .undo import UndoManager
-        from .migrations import migrate_to_v10
+        from .migrations import TASK_COLUMNS, migrate_to_v10
         import sqlite3
         connection = sqlite3.connect(self.store.repository.db_path)
         columns = {row[1] for row in connection.execute("PRAGMA table_info(tasks)")}; connection.close()
-        if "planning_date" not in columns:
+        if not set(TASK_COLUMNS) <= columns:
             migrate_to_v10(self.store.repository.db_path, self.store.repository.db_path.parent / "backups")
         self.detail_panel._save_timer.stop()
         self.detail_panel.task_id = None; self.detail_panel.record = None
         self.store.undo_manager = UndoManager(self.store.repository)
+        self.store.archive_completed()
         self._close_detail()
         self.store.changed.emit(ChangeSet(frozenset(), frozenset({"tasks", "dashboard"})))
 

@@ -63,11 +63,26 @@ class DeleteTask:
 
 class TaskStore(QObject):
     changed = Signal(object)
+    archive_failed = Signal(str)
 
     def __init__(self, repository: TaskRepository, parent=None):
         super().__init__(parent)
         self.repository = repository
         self.undo_manager = UndoManager(repository)
+        self.archive_completed()
+        self.archive_timer = QTimer(self)
+        self.archive_timer.setInterval(60_000)
+        self.archive_timer.timeout.connect(self.archive_completed)
+        self.archive_timer.start()
+
+    def archive_completed(self):
+        try:
+            task_ids = self.repository.archive_completed()
+        except (OSError, sqlite3.Error) as error:
+            self.archive_failed.emit(f"Archivierung fehlgeschlagen: {error}")
+            return
+        if task_ids:
+            self.changed.emit(ChangeSet(task_ids, frozenset({"tasks", "dashboard"})))
 
     def apply(self, command: TaskCommand) -> CommandResult:
         task_id = getattr(command, "task_id", None)

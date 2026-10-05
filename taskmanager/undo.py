@@ -27,4 +27,11 @@ class UndoManager:
             )
             connection.commit(); connection.close()
         self.repository.save(record.draft, record.id)
+        # Restoring an edit, reopen or deletion must preserve the original clock.
+        with sqlite3.connect(self.repository.db_path) as connection:
+            connection.execute("UPDATE tasks SET completed_at=?,archived_at=? WHERE id=?", (
+                record.completed_at.isoformat() if record.completed_at else None,
+                record.archived_at.isoformat() if record.archived_at else None,
+                record.id,
+            ))
         return True

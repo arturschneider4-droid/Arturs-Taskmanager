@@ -60,4 +60,5 @@ class TaskRecord:
     created_at: datetime
     updated_at: datetime
     project_name: str | None = None
-
+    completed_at: datetime | None = None
+    archived_at: datetime | None = None
