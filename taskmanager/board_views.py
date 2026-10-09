@@ -47,9 +47,20 @@ class KanbanCard(QFrame):
         self.theme_label.setStyleSheet("color: #52616D; font-size: 12px; font-weight: 400;")
         layout.addWidget(self.theme_label)
         deadline = "Deadline: " + task.deadline.strftime("%d.%m.%Y") if task.deadline else "Keine Deadline"
-        if task.deadline and task.deadline < date.today() and task.status != "Erledigt": deadline += " · überfällig"
+        overdue = bool(task.deadline and task.deadline < date.today() and task.status != "Erledigt" and not getattr(task, "archived_at", None))
+        if overdue: deadline += " · überfällig"
         self.deadline_label = QLabel(deadline); self.deadline_label.setWordWrap(True)
-        layout.addWidget(self.deadline_label)
+        deadline_row = QHBoxLayout(); deadline_row.setSpacing(6)
+        if overdue:
+            warning = QLabel("!")
+            warning.setObjectName("kanban_overdue_warning")
+            warning.setFixedSize(20, 20)
+            warning.setAlignment(Qt.AlignCenter)
+            warning.setAccessibleName("Deadline überschritten")
+            warning.setStyleSheet("color: #A3293D; background: #FCECEF; border: 1px solid #A3293D; border-radius: 10px; font-size: 14px; font-weight: 700;")
+            deadline_row.addWidget(warning, 0, Qt.AlignTop)
+        deadline_row.addWidget(self.deadline_label, 1)
+        layout.addLayout(deadline_row)
         badge = QLabel(label); badge.setObjectName("kanban_priority"); badge.setWordWrap(True)
         badge.setStyleSheet(f"color: {color}; background: {background}; border-radius: 4px; padding: 4px 6px; font-weight: 600;")
         layout.addWidget(badge)

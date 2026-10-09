@@ -90,3 +90,18 @@ def test_kanban_card_displays_theme(qtbot, theme):
     assert label.text() == (theme or "Ohne Themengebiet")
     assert label.wordWrap()
     assert label.text() in card.accessibleName()
+
+@pytest.mark.parametrize("offset,status,archived,warning", [(-1,"Offen",False,True),(-1,"In Arbeit",False,True),(0,"Offen",False,False),(1,"Offen",False,False),(None,"Offen",False,False),(-1,"Erledigt",False,False),(-1,"Erledigt",True,False)])
+def test_kanban_overdue_deadline_warning(qtbot, offset, status, archived, warning):
+    from types import SimpleNamespace
+    from datetime import timedelta
+    from taskmanager.board_views import KanbanCard
+    task = SimpleNamespace(title="Frist prüfen", project_name="Labor", priority="important_urgent", is_top_three=False, deadline=date.today()+timedelta(days=offset) if offset is not None else None, status=status, archived_at=date.today() if archived else None)
+    card = KanbanCard(task); qtbot.addWidget(card); card.show()
+    icon = card.findChild(QLabel, "kanban_overdue_warning")
+    assert (icon is not None) == warning
+    assert ("überfällig" in card.deadline_label.text()) == warning
+    if warning:
+        assert icon.text() == "!"
+        assert "#A3293D" in icon.styleSheet()
+        assert icon.accessibleName() == "Deadline überschritten"
