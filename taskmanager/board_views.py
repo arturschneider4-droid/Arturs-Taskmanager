@@ -38,6 +38,14 @@ class KanbanCard(QFrame):
         title.setWordWrap(True); title.setTextFormat(Qt.PlainText)
         title.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         layout.addWidget(title)
+        theme = task.project_name or "Ohne Themengebiet"
+        self.theme_label = QLabel(theme)
+        self.theme_label.setObjectName("kanban_theme")
+        self.theme_label.setTextFormat(Qt.PlainText)
+        self.theme_label.setWordWrap(True)
+        self.theme_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        self.theme_label.setStyleSheet("color: #52616D; font-size: 12px; font-weight: 400;")
+        layout.addWidget(self.theme_label)
         deadline = "Deadline: " + task.deadline.strftime("%d.%m.%Y") if task.deadline else "Keine Deadline"
         if task.deadline and task.deadline < date.today() and task.status != "Erledigt": deadline += " · überfällig"
         self.deadline_label = QLabel(deadline); self.deadline_label.setWordWrap(True)
@@ -45,7 +53,7 @@ class KanbanCard(QFrame):
         badge = QLabel(label); badge.setObjectName("kanban_priority"); badge.setWordWrap(True)
         badge.setStyleSheet(f"color: {color}; background: {background}; border-radius: 4px; padding: 4px 6px; font-weight: 600;")
         layout.addWidget(badge)
-        self.setAccessibleName(f"{task.title}. {deadline}. {label}")
+        self.setAccessibleName(f"{task.title}. Themengebiet: {theme}. {deadline}. {label}")
 
 
 class BoardLane(QListWidget):

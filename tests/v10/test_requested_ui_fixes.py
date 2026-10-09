@@ -78,3 +78,15 @@ def test_long_kanban_titles_are_fully_visible(qtbot, v10_database, width):
     card = lane.itemWidget(lane.item(0))
     for label in card.findChildren(QLabel):
         assert label.height() >= label.heightForWidth(label.width()), (label.text(), label.size(), label.heightForWidth(label.width()))
+
+@pytest.mark.parametrize("theme", [None, "Vertrieb", "Langfristige strategische Geschäftsentwicklung und Kundenbetreuung"])
+def test_kanban_card_displays_theme(qtbot, theme):
+    from types import SimpleNamespace
+    from taskmanager.board_views import KanbanCard
+    task = SimpleNamespace(title="Aufgabe", project_name=theme, priority="important_urgent", is_top_three=False, deadline=None, status="Offen")
+    card = KanbanCard(task); qtbot.addWidget(card); card.resize(200, 320); card.show()
+    label = card.findChild(QLabel, "kanban_theme")
+    assert label is not None
+    assert label.text() == (theme or "Ohne Themengebiet")
+    assert label.wordWrap()
+    assert label.text() in card.accessibleName()
